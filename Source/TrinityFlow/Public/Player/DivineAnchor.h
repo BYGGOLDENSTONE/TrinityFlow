@@ -4,6 +4,9 @@
 #include "Combat/WeaponBase.h"
 #include "DivineAnchor.generated.h"
 
+class UTrinityFlowWeaponStats;
+struct FAnchorAbilityStats;
+
 UCLASS()
 class TRINITYFLOW_API ADivineAnchor : public AWeaponBase
 {
@@ -17,7 +20,14 @@ public:
     virtual void AbilityE(AActor* Target) override; // Holy Gravity
     virtual void DefensiveAbility() override; // Order
 
+    virtual void BeginPlay() override;
+
 protected:
+    // Cached stats reference
+    UPROPERTY()
+    UTrinityFlowWeaponStats* WeaponStats;
+    
+    const FAnchorAbilityStats* AnchorStats;
     UPROPERTY()
     bool bOrderWindowActive = false;
 
@@ -29,6 +39,18 @@ protected:
 
     UPROPERTY()
     AActor* OrderAttacker = nullptr;
+
+    // Gravity Pull tracking
+    struct FPullTarget
+    {
+        AActor* Target;
+        FVector StartLocation;
+        FVector PullVelocity;
+        float PullTime;
+        float TotalPullDuration;
+    };
+
+    TArray<FPullTarget> ActivePulls;
 
 public:
     virtual void Tick(float DeltaTime) override;

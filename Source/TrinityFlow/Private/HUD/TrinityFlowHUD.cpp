@@ -407,11 +407,11 @@ void ATrinityFlowHUD::AddFloatingDamageNumber(const FVector& Location, float Dam
     // Set color based on damage type
     if (bIsEcho)
     {
-        NewNumber.Color = FLinearColor(1.0f, 0.0f, 1.0f); // Purple for echo damage
+        NewNumber.Color = FLinearColor(0.0f, 0.5f, 1.0f); // Blue for echo damage
     }
     else
     {
-        NewNumber.Color = FLinearColor(1.0f, 1.0f, 0.0f); // Yellow for normal damage
+        NewNumber.Color = FLinearColor(1.0f, 0.0f, 0.0f); // Red for normal damage
     }
     
     FloatingDamageNumbers.Add(NewNumber);
@@ -435,8 +435,8 @@ void ATrinityFlowHUD::DrawFloatingDamageNumbers()
                 FLinearColor DisplayColor = DamageNumber.Color;
                 DisplayColor.A = Alpha;
                 
-                // Calculate size based on damage amount
-                float FontScale = FMath::Clamp(1.0f + (DamageNumber.Damage / 100.0f), 1.0f, 2.0f);
+                // Calculate size based on damage amount - increased base size
+                float FontScale = FMath::Clamp(1.5f + (DamageNumber.Damage / 50.0f), 1.5f, 3.5f);
                 
                 // Format damage text
                 FString DamageText = FString::Printf(TEXT("%.0f"), DamageNumber.Damage);
