@@ -1,4 +1,5 @@
 #include "Core/TrinityFlowStatsSubsystem.h"
+#include "Core/TrinityFlowGameInstance.h"
 #include "Data/TrinityFlowCharacterStats.h"
 #include "Data/TrinityFlowWeaponStats.h"
 #include "Engine/DataTable.h"
@@ -9,6 +10,12 @@ void UTrinityFlowStatsSubsystem::Initialize(FSubsystemCollectionBase& Collection
     Super::Initialize(Collection);
     
     UE_LOG(LogTemp, Log, TEXT("TrinityFlow Stats Subsystem initializing..."));
+    
+    // Try to get configuration from Game Instance
+    if (UTrinityFlowGameInstance* GameInstance = Cast<UTrinityFlowGameInstance>(GetGameInstance()))
+    {
+        ConfigureFromGameInstance(GameInstance);
+    }
     
     // Load all stats on initialization
     LoadCharacterStats();
@@ -116,13 +123,20 @@ void UTrinityFlowStatsSubsystem::LoadCharacterStats()
 
 void UTrinityFlowStatsSubsystem::LoadWeaponStats()
 {
+    UE_LOG(LogTemp, Log, TEXT("Loading weapon stats..."));
+    
     // Load default weapon stats
     if (DefaultKatanaStats.IsValid())
     {
         if (UTrinityFlowWeaponStats* KatanaStats = DefaultKatanaStats.LoadSynchronous())
         {
             LoadedWeaponStats.Add("OverrideKatana", KatanaStats);
+            UE_LOG(LogTemp, Log, TEXT("Loaded default Katana stats"));
         }
+    }
+    else
+    {
+        UE_LOG(LogTemp, Warning, TEXT("DefaultKatanaStats is not valid"));
     }
     
     if (DefaultAnchorStats.IsValid())
@@ -130,7 +144,12 @@ void UTrinityFlowStatsSubsystem::LoadWeaponStats()
         if (UTrinityFlowWeaponStats* AnchorStats = DefaultAnchorStats.LoadSynchronous())
         {
             LoadedWeaponStats.Add("DivineAnchor", AnchorStats);
+            UE_LOG(LogTemp, Log, TEXT("Loaded default Anchor stats"));
         }
+    }
+    else
+    {
+        UE_LOG(LogTemp, Warning, TEXT("DefaultAnchorStats is not valid"));
     }
     
     // Load from data table if available
@@ -160,4 +179,40 @@ void UTrinityFlowStatsSubsystem::ClearCache()
 {
     LoadedCharacterStats.Empty();
     LoadedWeaponStats.Empty();
+}
+
+void UTrinityFlowStatsSubsystem::ConfigureFromGameInstance(UTrinityFlowGameInstance* GameInstance)
+{
+    if (!GameInstance)
+    {
+        return;
+    }
+    
+    UE_LOG(LogTemp, Log, TEXT("Configuring Stats Subsystem from Game Instance"));
+    
+    // Copy references from Game Instance
+    if (GameInstance->CharacterStatsTable)
+    {
+        CharacterStatsTable = GameInstance->CharacterStatsTable;
+    }
+    
+    if (GameInstance->WeaponStatsTable)
+    {
+        WeaponStatsTable = GameInstance->WeaponStatsTable;
+    }
+    
+    if (GameInstance->DefaultPlayerStats)
+    {
+        DefaultPlayerStats = GameInstance->DefaultPlayerStats;
+    }
+    
+    if (GameInstance->DefaultKatanaStats)
+    {
+        DefaultKatanaStats = GameInstance->DefaultKatanaStats;
+    }
+    
+    if (GameInstance->DefaultAnchorStats)
+    {
+        DefaultAnchorStats = GameInstance->DefaultAnchorStats;
+    }
 }

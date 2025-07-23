@@ -123,7 +123,9 @@ TrinityFlow/
 ## Recent Updates
 
 - **Stats Management System**: All gameplay values now editable in editor
-- **Data-Driven Tags**: Configure tags via data tables
+- **Player Stats Integration**: Player now loads stats from the subsystem like enemies
+- **Tag System Fix**: Fixed bitmask enum display issues in editor
+- **Data-Driven Tags**: Configure tags via data tables with proper enum metadata
 - **Combat Visual Improvements**: Better damage feedback and enemy info display
 - **Physics Fixes**: Improved gravity pull and knockback mechanics
 

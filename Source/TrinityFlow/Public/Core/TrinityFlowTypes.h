@@ -10,15 +10,15 @@ enum class EDamageType : uint8
     Soul UMETA(DisplayName = "Soul")
 };
 
-UENUM(BlueprintType)
+UENUM(BlueprintType, Meta = (Bitflags, UseEnumValuesAsMaskValuesInEditor = "true"))
 enum class ECharacterTag : uint8
 {
-    None = 0x00,
-    Shielded = 0x01,
-    Armored = 0x02,
-    Ghost = 0x04,
-    Mechanical = 0x08,
-    HaveSoul = 0x10
+    None = 0 UMETA(Hidden),
+    Shielded = 1 << 0 UMETA(DisplayName = "Shielded"),
+    Armored = 1 << 1 UMETA(DisplayName = "Armored"),
+    Ghost = 1 << 2 UMETA(DisplayName = "Ghost"),
+    Mechanical = 1 << 3 UMETA(DisplayName = "Mechanical"),
+    HaveSoul = 1 << 4 UMETA(DisplayName = "HaveSoul")
 };
 ENUM_CLASS_FLAGS(ECharacterTag);
 

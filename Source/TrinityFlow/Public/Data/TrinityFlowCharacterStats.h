@@ -51,12 +51,13 @@ public:
     float SightRange = 1500.0f;
 
     // Tags
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tags", meta = (Bitmask, BitmaskEnum = ECharacterTag))
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tags", meta = (Bitmask, BitmaskEnum = "/Script/TrinityFlow.ECharacterTag"))
     int32 CharacterTags = 0;
 
     // Helper function to get tags as enum
     ECharacterTag GetCharacterTags() const 
     { 
+        UE_LOG(LogTemp, Warning, TEXT("CharacterStats %s - Raw tag int value: %d"), *CharacterName, CharacterTags);
         return static_cast<ECharacterTag>(CharacterTags); 
     }
 

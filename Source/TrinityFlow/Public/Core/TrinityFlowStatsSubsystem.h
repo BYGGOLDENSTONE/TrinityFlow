@@ -46,6 +46,9 @@ public:
     virtual void Initialize(FSubsystemCollectionBase& Collection) override;
     virtual void Deinitialize() override;
 
+    // Configuration from Game Instance
+    void ConfigureFromGameInstance(class UTrinityFlowGameInstance* GameInstance);
+
     // Character Stats Access
     UFUNCTION(BlueprintCallable, Category = "Stats")
     UTrinityFlowCharacterStats* GetCharacterStats(FName CharacterID) const;

@@ -13,6 +13,8 @@
 #include "Core/HealthComponent.h"
 #include "Core/TagComponent.h"
 #include "Core/StateComponent.h"
+#include "Core/TrinityFlowStatsSubsystem.h"
+#include "Data/TrinityFlowCharacterStats.h"
 #include "Combat/AbilityComponent.h"
 #include "Player/OverrideKatana.h"
 #include "Player/DivineAnchor.h"
@@ -165,16 +167,50 @@ void ATrinityFlowCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// Setup player resources and tags
-	if (HealthComponent)
+	// Load player stats from subsystem
+	UTrinityFlowCharacterStats* PlayerStats = nullptr;
+	
+	if (UGameInstance* GameInstance = GetGameInstance())
 	{
-		FCharacterResources PlayerResources(200.0f, 20.0f, 20.0f);
-		HealthComponent->SetResources(PlayerResources);
+		if (UTrinityFlowStatsSubsystem* StatsSubsystem = GameInstance->GetSubsystem<UTrinityFlowStatsSubsystem>())
+		{
+			PlayerStats = StatsSubsystem->GetPlayerStats();
+		}
 	}
-
-	if (TagComponent)
+	
+	// Apply stats if found
+	if (PlayerStats)
 	{
-		TagComponent->SetTags(ECharacterTag::HaveSoul | ECharacterTag::Armored);
+		// Apply base stats
+		if (HealthComponent)
+		{
+			FCharacterResources Resources = PlayerStats->GetCharacterResources();
+			HealthComponent->SetResources(Resources);
+		}
+		
+		// Apply tags
+		if (TagComponent)
+		{
+			TagComponent->SetTags(PlayerStats->GetCharacterTags());
+		}
+		
+		UE_LOG(LogTemplateCharacter, Log, TEXT("Player loaded stats from %s"), *PlayerStats->CharacterName);
+	}
+	else
+	{
+		// Fallback to default values if stats not found
+		UE_LOG(LogTemplateCharacter, Warning, TEXT("Player could not find stats, using defaults"));
+		
+		if (HealthComponent)
+		{
+			FCharacterResources PlayerResources(200.0f, 20.0f, 20.0f);
+			HealthComponent->SetResources(PlayerResources);
+		}
+
+		if (TagComponent)
+		{
+			TagComponent->SetTags(ECharacterTag::HaveSoul | ECharacterTag::Armored);
+		}
 	}
 
 	// Spawn weapons

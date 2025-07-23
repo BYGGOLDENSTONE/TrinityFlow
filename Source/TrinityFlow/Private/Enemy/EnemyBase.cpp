@@ -4,6 +4,8 @@
 #include "Core/StateComponent.h"
 #include "Core/CombatComponent.h"
 #include "Core/CombatStateManager.h"
+#include "Core/TrinityFlowStatsSubsystem.h"
+#include "Data/TrinityFlowCharacterStats.h"
 #include "../../TrinityFlowCharacter.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
@@ -55,12 +57,7 @@ void AEnemyBase::BeginPlay()
         HealthComponent->OnDeath.AddDynamic(this, &AEnemyBase::OnDeathEvent);
     }
 
-    // Set attack speed
-    if (CombatComponent)
-    {
-        CombatComponent->SetAttackSpeed(1.0f / 1.5f); // 1 attack per 1.5 seconds
-        CombatComponent->SetAttackRange(AttackRange);
-    }
+    // Attack speed and range are set in SetupEnemy() from stats
 
     // Find player
     PlayerTarget = Cast<ATrinityFlowCharacter>(UGameplayStatics::GetPlayerPawn(GetWorld(), 0));
@@ -108,7 +105,72 @@ void AEnemyBase::Tick(float DeltaTime)
 
 void AEnemyBase::SetupEnemy()
 {
-    // Override in derived classes
+    // Load stats from subsystem
+    UTrinityFlowCharacterStats* StatsToUse = nullptr;
+    
+    // First check if we have an override
+    if (OverrideStats)
+    {
+        StatsToUse = OverrideStats;
+    }
+    else
+    {
+        // Get from stats subsystem
+        if (UGameInstance* GameInstance = GetGameInstance())
+        {
+            if (UTrinityFlowStatsSubsystem* StatsSubsystem = GameInstance->GetSubsystem<UTrinityFlowStatsSubsystem>())
+            {
+                StatsToUse = StatsSubsystem->GetCharacterStats(EnemyStatsID);
+            }
+        }
+    }
+    
+    // Apply stats if found
+    if (StatsToUse)
+    {
+        // Apply base stats
+        if (HealthComponent)
+        {
+            FCharacterResources Resources = StatsToUse->GetCharacterResources();
+            HealthComponent->SetResources(Resources);
+        }
+        
+        // Apply combat properties
+        AttackRange = StatsToUse->AttackRange;
+        SightRange = StatsToUse->SightRange;
+        bIsAreaDamage = StatsToUse->bIsAreaDamage;
+        
+        if (CombatComponent)
+        {
+            CombatComponent->SetAttackSpeed(1.0f / StatsToUse->AttackSpeed); // Convert to delay
+            CombatComponent->SetAttackRange(AttackRange);
+        }
+        
+        // Apply tags
+        if (TagComponent)
+        {
+            ECharacterTag LoadedTags = StatsToUse->GetCharacterTags();
+            TagComponent->SetTags(LoadedTags);
+            
+            // Debug logging for tags
+            int32 TagsAsInt = static_cast<int32>(LoadedTags);
+            FString TagsString = TEXT("");
+            if (EnumHasAnyFlags(LoadedTags, ECharacterTag::Shielded)) TagsString += TEXT("Shielded ");
+            if (EnumHasAnyFlags(LoadedTags, ECharacterTag::Armored)) TagsString += TEXT("Armored ");
+            if (EnumHasAnyFlags(LoadedTags, ECharacterTag::Ghost)) TagsString += TEXT("Ghost ");
+            if (EnumHasAnyFlags(LoadedTags, ECharacterTag::Mechanical)) TagsString += TEXT("Mechanical ");
+            if (EnumHasAnyFlags(LoadedTags, ECharacterTag::HaveSoul)) TagsString += TEXT("HaveSoul ");
+            
+            UE_LOG(LogTemp, Warning, TEXT("Enemy %s tags - Raw int: %d, Enum flags: %s"), 
+                *GetName(), TagsAsInt, *TagsString);
+        }
+        
+        UE_LOG(LogTemp, Log, TEXT("Enemy %s loaded stats from %s"), *GetName(), *StatsToUse->CharacterName);
+    }
+    else
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Enemy %s could not find stats for ID: %s"), *GetName(), *EnemyStatsID.ToString());
+    }
 }
 
 void AEnemyBase::OnDeath()

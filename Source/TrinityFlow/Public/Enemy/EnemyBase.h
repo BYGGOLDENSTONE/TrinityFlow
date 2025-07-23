@@ -35,13 +35,21 @@ protected:
     UPROPERTY(EditDefaultsOnly, Category = "Components")
     class USkeletalMeshComponent* MeshComponent;
 
-    UPROPERTY(EditDefaultsOnly, Category = "Combat")
+    // Stats Configuration
+    UPROPERTY(EditDefaultsOnly, Category = "Stats")
+    FName EnemyStatsID = "StandardEnemy";
+
+    UPROPERTY(EditDefaultsOnly, Category = "Stats")
+    class UTrinityFlowCharacterStats* OverrideStats;
+
+    // Runtime stats (loaded from data)
+    UPROPERTY()
     float SightRange = 1500.0f;
 
-    UPROPERTY(EditDefaultsOnly, Category = "Combat")
+    UPROPERTY()
     float AttackRange = 300.0f;
 
-    UPROPERTY(EditDefaultsOnly, Category = "Combat")
+    UPROPERTY()
     bool bIsAreaDamage = false;
 
     UPROPERTY()

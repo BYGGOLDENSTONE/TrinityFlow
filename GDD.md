@@ -398,36 +398,66 @@ UTrinityFlowWeaponStats
 
 ### Stats Configuration
 
-#### 1. Create Game Instance
+#### 1. Create Game Instance Blueprint
 ```
-Content → Blueprint Class → GameInstance
-Name: BP_TrinityFlowGameInstance
-Project Settings → Maps & Modes → Set Game Instance
-```
-
-#### 2. Create Character Stats
-```
-Content → Data Asset → TrinityFlowCharacterStats
-Configure: Health, Attack, Defense, Tags
-```
-
-#### 3. Create Weapon Stats
-```
-Content → Data Asset → TrinityFlowWeaponStats
-Configure: Ranges, Cooldowns, Forces
+1. Right-click in Content Browser → Blueprint Class
+2. Select UTrinityFlowGameInstance as parent class
+3. Name it BP_TrinityFlowGameInstance
+4. Open the blueprint and set:
+   - Default Player Stats (required)
+   - Default Katana Stats (required)
+   - Default Anchor Stats (required)
+   - Character Stats Table (optional)
+   - Weapon Stats Table (optional)
+5. Project Settings → Maps & Modes → Game Instance Class → BP_TrinityFlowGameInstance
 ```
 
-#### 4. Create Tag Data Table
+#### 2. Create Character Stats Data Assets
 ```
-Content → Data Table → FCharacterTagData
-Add rows for each tag with effects
+1. Right-click → Miscellaneous → Data Asset → UTrinityFlowCharacterStats
+2. For Player:
+   - CharacterID: "Player"
+   - MaxHealth: 200
+   - AttackPoint: 20
+   - DefencePoint: 20
+   - CharacterTags: HaveSoul + Armored
+3. For Enemies (create one for each):
+   - StandardEnemy: 100 HP, 10 ATK, 0 DEF
+   - TankEnemy: 200 HP, 40 ATK, 20 DEF, Armored tag
+   - ShieldedTankEnemy: 300 HP, 20 ATK, 20 DEF, Shielded tag
+   - PhaseEnemy: 100 HP, 20 ATK, 0 DEF, Ghost tag
+   - ShieldedTankRobotEnemy: 300 HP, 30 ATK, 40 DEF, Mechanical + Shielded tags
 ```
 
-#### 5. Configure Subsystem
-In Game Instance Blueprint:
-- Set default stat assets
-- Optional: Set data tables
-- Configure reload settings
+#### 3. Create Weapon Stats Data Assets
+```
+1. Right-click → Miscellaneous → Data Asset → UTrinityFlowWeaponStats
+2. For Override Katana:
+   - WeaponID: "OverrideKatana"
+   - Configure Katana ability stats
+3. For Divine Anchor:
+   - WeaponID: "DivineAnchor"
+   - Configure Anchor ability stats
+```
+
+#### 4. (Optional) Create Data Tables
+```
+1. Character Stats Table:
+   - Row Structure: FCharacterStatsTableRow
+   - Add rows referencing your character stat assets
+2. Weapon Stats Table:
+   - Row Structure: FWeaponStatsTableRow
+   - Add rows referencing your weapon stat assets
+3. Tag Data Table:
+   - Row Structure: FCharacterTagData
+   - Define tag display names and effects
+```
+
+#### 5. Tag System Notes
+- Tags use bitmask values (can combine multiple tags)
+- Tag values: Shielded=1, Armored=2, Ghost=4, Mechanical=8, HaveSoul=16
+- Fixed editor display issues with proper enum metadata
+- Tags now correctly save and load from data assets
 
 ### Controls
 | Action | Key | Context |
