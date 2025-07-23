@@ -39,6 +39,6 @@ public:
     UFUNCTION()
     bool ProcessOrder();
 
-private:
+    UFUNCTION()
     void PerformCounterAttack(AActor* Target);
 };

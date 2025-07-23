@@ -6,6 +6,7 @@
 #include "Engine/OverlapResult.h"
 #include "CollisionQueryParams.h"
 #include "GameFramework/Actor.h"
+#include "../../TrinityFlowCharacter.h"
 
 UCombatComponent::UCombatComponent()
 {
@@ -34,13 +35,43 @@ void UCombatComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActo
     {
         CastingTimer += DeltaTime;
         
-        // Draw debug line for attack casting
+        // Draw debug line for attack casting with color-coded timing windows
+        // Get head position (approximate by adding height offset)
         FVector StartLocation = GetOwner()->GetActorLocation();
+        StartLocation.Z += 150.0f; // Approximate head height
+        
         FVector EndLocation = CurrentTarget->GetActorLocation();
+        EndLocation.Z += 50.0f; // Target center mass
+        
         float Progress = CastingTimer / CastingTime;
         FVector CurrentEndLocation = FMath::Lerp(StartLocation, EndLocation, Progress);
         
-        DrawDebugLine(GetWorld(), StartLocation, CurrentEndLocation, FColor::Red, false, DeltaTime * 2.0f, 0, 2.0f);
+        // Color based on timing window
+        FColor LineColor;
+        float LineThickness = 3.0f;
+        
+        if (CastingTimer <= 0.75f)
+        {
+            // Moderate window (0-0.75s) - Yellow/Orange
+            LineColor = FColor::Orange;
+            LineThickness = 3.0f + (CastingTimer * 2.0f); // Growing thickness
+        }
+        else
+        {
+            // Perfect window (0.75-1.5s) - Green
+            LineColor = FColor::Green;
+            LineThickness = 4.0f + ((CastingTimer - 0.75f) * 3.0f); // Larger growing thickness
+            
+            // Add extra visual feedback for perfect window
+            DrawDebugSphere(GetWorld(), CurrentEndLocation, 10.0f, 8, LineColor, false, DeltaTime * 2.0f);
+        }
+        
+        DrawDebugLine(GetWorld(), StartLocation, CurrentEndLocation, LineColor, false, DeltaTime * 2.0f, 0, LineThickness);
+        
+        // Add text indicator above enemy
+        FVector TextLocation = StartLocation + FVector(0, 0, 30);
+        FString TimingText = CastingTimer <= 0.75f ? TEXT("MODERATE") : TEXT("PERFECT!");
+        DrawDebugString(GetWorld(), TextLocation, TimingText, nullptr, LineColor, DeltaTime * 2.0f);
         
         if (CastingTimer >= CastingTime)
         {
@@ -116,7 +147,13 @@ void UCombatComponent::ExecuteAttack()
         {
             if (AActor* HitActor = Result.GetActor())
             {
-                if (UHealthComponent* HealthComp = HitActor->FindComponentByClass<UHealthComponent>())
+                // Check if target is player with defensive ability system
+                if (ATrinityFlowCharacter* PlayerTarget = Cast<ATrinityFlowCharacter>(HitActor))
+                {
+                    // Notify player of incoming attack for defensive ability window
+                    PlayerTarget->OnIncomingAttack(GetOwner(), DamageInfo.Amount, DamageInfo.Type);
+                }
+                else if (UHealthComponent* HealthComp = HitActor->FindComponentByClass<UHealthComponent>())
                 {
                     FVector DamageDirection = (HitActor->GetActorLocation() - GetOwner()->GetActorLocation()).GetSafeNormal();
                     HealthComp->TakeDamage(DamageInfo, DamageDirection);
@@ -127,8 +164,15 @@ void UCombatComponent::ExecuteAttack()
     else
     {
         // Single target damage
-        if (UHealthComponent* TargetHealth = CurrentTarget->FindComponentByClass<UHealthComponent>())
+        // Check if target is player with defensive ability system
+        if (ATrinityFlowCharacter* PlayerTarget = Cast<ATrinityFlowCharacter>(CurrentTarget))
         {
+            // Notify player of incoming attack for defensive ability window
+            PlayerTarget->OnIncomingAttack(GetOwner(), DamageInfo.Amount, DamageInfo.Type);
+        }
+        else if (UHealthComponent* TargetHealth = CurrentTarget->FindComponentByClass<UHealthComponent>())
+        {
+            // Normal damage for non-player targets
             FVector DamageDirection = (CurrentTarget->GetActorLocation() - GetOwner()->GetActorLocation()).GetSafeNormal();
             TargetHealth->TakeDamage(DamageInfo, DamageDirection);
         }

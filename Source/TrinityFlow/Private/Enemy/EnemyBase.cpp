@@ -20,10 +20,21 @@ AEnemyBase::AEnemyBase()
     SetRootComponent(CapsuleComponent);
     CapsuleComponent->SetCapsuleHalfHeight(88.0f);
     CapsuleComponent->SetCapsuleRadius(34.0f);
+    
+    // Set collision properties for proper detection
+    CapsuleComponent->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+    CapsuleComponent->SetCollisionResponseToAllChannels(ECR_Block);
+    CapsuleComponent->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
+    CapsuleComponent->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
 
     MeshComponent = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("MeshComponent"));
     MeshComponent->SetupAttachment(CapsuleComponent);
     MeshComponent->SetRelativeLocation(FVector(0.0f, 0.0f, -88.0f));
+    
+    // Ensure mesh also blocks visibility for line traces
+    MeshComponent->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+    MeshComponent->SetCollisionResponseToAllChannels(ECR_Ignore);
+    MeshComponent->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
 
     HealthComponent = CreateDefaultSubobject<UHealthComponent>(TEXT("HealthComponent"));
     TagComponent = CreateDefaultSubobject<UTagComponent>(TEXT("TagComponent"));
@@ -59,6 +70,22 @@ void AEnemyBase::BeginPlay()
     {
         CombatManager->RegisterEnemy(this);
     }
+    
+    // Register damage events with player for echo system
+    // Do this with a small delay to ensure everything is initialized
+    FTimerHandle TimerHandle;
+    GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this]()
+    {
+        if (PlayerTarget)
+        {
+            UE_LOG(LogTemp, Warning, TEXT("Enemy %s attempting to register with player"), *GetName());
+            PlayerTarget->RegisterEnemyDamageEvents(this);
+        }
+        else
+        {
+            UE_LOG(LogTemp, Warning, TEXT("Enemy %s could not find player target"), *GetName());
+        }
+    }, 0.1f, false);
 }
 
 void AEnemyBase::Tick(float DeltaTime)

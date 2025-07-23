@@ -14,12 +14,30 @@ AOverrideKatana::AOverrideKatana()
     AbilityQCooldown = 5.0f; // Echoes of Data
     AbilityECooldown = 6.0f; // Code Break
     
-    AbilityComponent = CreateDefaultSubobject<UAbilityComponent>(TEXT("AbilityComponent"));
+    // Don't create AbilityComponent here - we'll get it from the owner
 }
 
 void AOverrideKatana::BeginPlay()
 {
     Super::BeginPlay();
+    
+    // Get the ability component from the owner (player character)
+    if (GetOwner())
+    {
+        AbilityComponent = GetOwner()->FindComponentByClass<UAbilityComponent>();
+        if (!AbilityComponent)
+        {
+            UE_LOG(LogTemp, Error, TEXT("OverrideKatana: Could not find AbilityComponent on owner"));
+        }
+        else
+        {
+            UE_LOG(LogTemp, Warning, TEXT("OverrideKatana: Successfully found AbilityComponent on owner"));
+        }
+    }
+    else
+    {
+        UE_LOG(LogTemp, Error, TEXT("OverrideKatana: No owner found"));
+    }
 }
 
 void AOverrideKatana::AbilityQ(AActor* Target)
@@ -39,6 +57,11 @@ void AOverrideKatana::AbilityQ(AActor* Target)
     if (AbilityComponent)
     {
         AbilityComponent->SetEchoesTarget(Target);
+        UE_LOG(LogTemp, Warning, TEXT("Echoes of Data: Marked enemy %s"), *Target->GetName());
+    }
+    else
+    {
+        UE_LOG(LogTemp, Error, TEXT("Echoes of Data: No AbilityComponent found!"));
     }
 
     StartCooldown(AbilityQCooldownTimer, AbilityQCooldown);
@@ -70,12 +93,6 @@ void AOverrideKatana::AbilityE(AActor* Target)
 
         FVector DamageDirection = (Target->GetActorLocation() - GetActorLocation()).GetSafeNormal();
         TargetHealth->TakeDamage(DamageInfo, DamageDirection);
-
-        // Notify ability component for echoes
-        if (AbilityComponent)
-        {
-            AbilityComponent->OnDamageDealt(Target, DamageInfo);
-        }
 
         // Visual feedback
         DrawDebugLine(GetWorld(), GetActorLocation(), Target->GetActorLocation(), FColor::Cyan, false, 0.5f, 0, 5.0f);

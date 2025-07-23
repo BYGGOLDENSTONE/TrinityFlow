@@ -35,10 +35,15 @@ public:
 
     UFUNCTION()
     void OnDamageDealt(AActor* DamagedActor, const FDamageInfo& DamageInfo);
+    
+    UFUNCTION()
+    void OnActualDamageDealt(AActor* DamagedActor, float ActualDamage, AActor* DamageInstigator, EDamageType DamageType);
 
 protected:
     UPROPERTY()
     FEchoesData EchoesData;
 
     void ProcessEchoesDamage(AActor* DamagedActor, const FDamageInfo& DamageInfo);
+    
+    void ProcessEchoesDamageActual(AActor* DamagedActor, float ActualDamage, AActor* DamageInstigator);
 };

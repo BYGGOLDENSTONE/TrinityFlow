@@ -29,8 +29,12 @@ void UHealthComponent::TakeDamage(const FDamageInfo& DamageInfo, const FVector& 
     
     if (FinalDamage > 0.0f)
     {
+        float HealthBefore = Resources.Health;
         Resources.Health = FMath::Max(0.0f, Resources.Health - FinalDamage);
+        float ActualDamageDealt = HealthBefore - Resources.Health;
+        
         OnHealthChanged.Broadcast(Resources.Health);
+        OnDamageDealt.Broadcast(GetOwner(), ActualDamageDealt, DamageInfo.Instigator, DamageInfo.Type);
         
         if (!IsAlive())
         {

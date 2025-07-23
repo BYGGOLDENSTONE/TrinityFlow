@@ -7,6 +7,7 @@
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnHealthChanged, float, NewHealth);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnDeath);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FOnDamageDealt, AActor*, DamagedActor, float, ActualDamage, AActor*, DamageInstigator, EDamageType, DamageType);
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class TRINITYFLOW_API UHealthComponent : public UActorComponent
@@ -44,6 +45,9 @@ public:
 
     UPROPERTY()
     FOnDeath OnDeath;
+
+    UPROPERTY()
+    FOnDamageDealt OnDamageDealt;
 
 protected:
     UPROPERTY()

@@ -16,8 +16,10 @@
 #include "Combat/AbilityComponent.h"
 #include "Player/OverrideKatana.h"
 #include "Player/DivineAnchor.h"
+#include "Enemy/EnemyBase.h"
 #include "DrawDebugHelpers.h"
 #include "Engine/World.h"
+#include "Kismet/GameplayStatics.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -50,8 +52,17 @@ ATrinityFlowCharacter::ATrinityFlowCharacter()
 	// Create a camera boom (pulls in towards the player if there is a collision)
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(RootComponent);
-	CameraBoom->TargetArmLength = 400.0f; // The camera follows at this distance behind the character	
+	CameraBoom->TargetArmLength = 300.0f; // The camera follows at this distance behind the character	
 	CameraBoom->bUsePawnControlRotation = true; // Rotate the arm based on the controller
+	
+	// Set up shoulder camera offset (right and up)
+	CameraBoom->SocketOffset = FVector(0.0f, 80.0f, 60.0f); // Forward, Right, Up offset
+	
+	// Additional camera boom settings for better shoulder view
+	CameraBoom->bEnableCameraLag = true;
+	CameraBoom->CameraLagSpeed = 10.0f;
+	CameraBoom->bEnableCameraRotationLag = true;
+	CameraBoom->CameraRotationLagSpeed = 10.0f;
 
 	// Create a follow camera
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
@@ -185,11 +196,45 @@ void ATrinityFlowCharacter::BeginPlay()
 	}
 
 	CurrentWeapon = OverrideKatana;
+	
+	// Register player's own health component for echo system (in case of self-damage or special abilities)
+	if (HealthComponent)
+	{
+		HealthComponent->OnDamageDealt.AddDynamic(this, &ATrinityFlowCharacter::OnAnyDamageDealt);
+	}
 }
 
 void ATrinityFlowCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+	// Update defensive window
+	if (bDefensiveAbilityActive)
+	{
+		DefensiveWindowTimer += DeltaTime;
+		
+		// Check if window expired (1.5 seconds)
+		if (DefensiveWindowTimer >= 1.5f)
+		{
+			// Window expired, take full damage
+			bDefensiveAbilityActive = false;
+			
+			if (HealthComponent && PendingDamage > 0.0f)
+			{
+				FDamageInfo DamageInfo;
+				DamageInfo.Amount = PendingDamage;
+				DamageInfo.Type = PendingDamageType;
+				DamageInfo.Instigator = PendingAttacker;
+				
+				FVector DamageDirection = PendingAttacker ? (GetActorLocation() - PendingAttacker->GetActorLocation()).GetSafeNormal() : FVector::ForwardVector;
+				HealthComponent->TakeDamage(DamageInfo, DamageDirection);
+			}
+			
+			DefensiveWindowTimer = 0.0f;
+			PendingDamage = 0.0f;
+			PendingAttacker = nullptr;
+		}
+	}
 }
 
 void ATrinityFlowCharacter::Attack()
@@ -244,15 +289,101 @@ void ATrinityFlowCharacter::DefensiveAbility()
 	if (StateComponent && StateComponent->HasState(ECharacterState::Combat))
 	{
 		// In combat - use defensive ability
-		if (CurrentWeapon)
+		if (bDefensiveAbilityActive && CurrentWeapon)
 		{
-			CurrentWeapon->DefensiveAbility();
+			// Check timing window
+			float DamageMultiplier = 1.0f;
+			
+			if (DefensiveWindowTimer <= 0.75f)
+			{
+				// Moderate window - half damage
+				DamageMultiplier = 0.5f;
+				DrawDebugSphere(GetWorld(), GetActorLocation(), 80.0f, 12, FColor::Orange, false, 0.5f);
+			}
+			else if (DefensiveWindowTimer <= 1.5f)
+			{
+				// Perfect window - no damage
+				DamageMultiplier = 0.0f;
+				DrawDebugSphere(GetWorld(), GetActorLocation(), 100.0f, 12, FColor::Green, false, 0.5f);
+				
+				// Reset Code Break cooldown if using katana
+				if (bIsKatanaActive && OverrideKatana)
+				{
+					OverrideKatana->OnPerfectDodge();
+				}
+				// Counter attack if using Divine Anchor
+				else if (!bIsKatanaActive && DivineAnchor && PendingAttacker)
+				{
+					DivineAnchor->PerformCounterAttack(PendingAttacker);
+				}
+			}
+			
+			// Apply damage with multiplier
+			if (HealthComponent && DamageMultiplier > 0.0f && PendingDamage > 0.0f)
+			{
+				FDamageInfo DamageInfo;
+				DamageInfo.Amount = PendingDamage * DamageMultiplier;
+				DamageInfo.Type = PendingDamageType;
+				DamageInfo.Instigator = PendingAttacker;
+				
+				FVector DamageDirection = PendingAttacker ? (GetActorLocation() - PendingAttacker->GetActorLocation()).GetSafeNormal() : FVector::ForwardVector;
+				HealthComponent->TakeDamage(DamageInfo, DamageDirection);
+			}
+			
+			// Reset defensive state
+			bDefensiveAbilityActive = false;
+			DefensiveWindowTimer = 0.0f;
+			PendingDamage = 0.0f;
+			PendingAttacker = nullptr;
 		}
 	}
 	else
 	{
 		// Not in combat - jump
 		Jump();
+	}
+}
+
+void ATrinityFlowCharacter::OnIncomingAttack(AActor* Attacker, float Damage, EDamageType DamageType)
+{
+	// Start defensive window
+	bDefensiveAbilityActive = true;
+	DefensiveWindowTimer = 0.0f;
+	PendingAttacker = Attacker;
+	PendingDamage = Damage;
+	PendingDamageType = DamageType;
+	DefensiveDamageMultiplier = 1.0f;
+}
+
+void ATrinityFlowCharacter::OnAnyDamageDealt(AActor* DamagedActor, float ActualDamage, AActor* DamageInstigator, EDamageType DamageType)
+{
+	UE_LOG(LogTemp, Warning, TEXT("OnAnyDamageDealt: DamagedActor=%s, Damage=%.1f, Instigator=%s"), 
+		DamagedActor ? *DamagedActor->GetName() : TEXT("NULL"),
+		ActualDamage,
+		DamageInstigator ? *DamageInstigator->GetName() : TEXT("NULL"));
+	
+	// Check if this damage was dealt by the player (could be this character or its pawn)
+	bool bIsPlayerDamage = (DamageInstigator == this) || 
+	                      (DamageInstigator && DamageInstigator->GetOwner() == this) ||
+	                      (Cast<APawn>(DamageInstigator) && Cast<APawn>(DamageInstigator)->GetController() && 
+	                       Cast<APawn>(DamageInstigator)->GetController()->GetPawn() == this);
+	
+	if (bIsPlayerDamage && AbilityComponent && DamagedActor)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Forwarding to AbilityComponent for echo processing"));
+		AbilityComponent->OnActualDamageDealt(DamagedActor, ActualDamage, this, DamageType);
+	}
+}
+
+void ATrinityFlowCharacter::RegisterEnemyDamageEvents(AEnemyBase* Enemy)
+{
+	if (Enemy)
+	{
+		if (UHealthComponent* HealthComp = Enemy->FindComponentByClass<UHealthComponent>())
+		{
+			HealthComp->OnDamageDealt.AddDynamic(this, &ATrinityFlowCharacter::OnAnyDamageDealt);
+			UE_LOG(LogTemp, Warning, TEXT("Registered damage events for enemy: %s"), *Enemy->GetName());
+		}
 	}
 }
 
@@ -267,10 +398,18 @@ AActor* ATrinityFlowCharacter::GetTargetInSight()
 	FHitResult Hit;
 	FCollisionQueryParams QueryParams;
 	QueryParams.AddIgnoredActor(this);
+	QueryParams.bTraceComplex = false;
 
-	if (GetWorld()->LineTraceSingleByChannel(Hit, CameraLocation, TraceEnd, ECC_Pawn, QueryParams))
+	// Use visibility channel for better hit detection
+	if (GetWorld()->LineTraceSingleByChannel(Hit, CameraLocation, TraceEnd, ECC_Visibility, QueryParams))
 	{
-		return Hit.GetActor();
+		AActor* HitActor = Hit.GetActor();
+		
+		// Check if it's an enemy
+		if (HitActor && HitActor->FindComponentByClass<UHealthComponent>() && HitActor != this)
+		{
+			return HitActor;
+		}
 	}
 
 	return nullptr;

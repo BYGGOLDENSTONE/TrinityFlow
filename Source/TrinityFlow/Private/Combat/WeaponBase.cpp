@@ -58,6 +58,11 @@ void AWeaponBase::BasicAttack(AActor* Target)
         DamageInfo.Amount = OwnerHealthComponent->GetResources().AttackPoint;
         DamageInfo.Type = BasicDamageType;
         DamageInfo.Instigator = OwnerPawn;
+        
+        UE_LOG(LogTemp, Warning, TEXT("WeaponBase BasicAttack: Instigator=%s, Target=%s, Damage=%.1f"), 
+            OwnerPawn ? *OwnerPawn->GetName() : TEXT("NULL"),
+            Target ? *Target->GetName() : TEXT("NULL"),
+            DamageInfo.Amount);
 
         FVector DamageDirection = (Target->GetActorLocation() - GetActorLocation()).GetSafeNormal();
         TargetHealth->TakeDamage(DamageInfo, DamageDirection);

@@ -85,6 +85,21 @@ public:
 	UFUNCTION()
 	class AWeaponBase* GetCurrentWeapon() const { return CurrentWeapon; }
 	
+	// Defensive ability handling
+	UFUNCTION()
+	void OnIncomingAttack(AActor* Attacker, float Damage, EDamageType DamageType);
+
+	UFUNCTION()
+	bool IsDefensiveAbilityActive() const { return bDefensiveAbilityActive; }
+
+	UFUNCTION()
+	float GetDefensiveDamageMultiplier() const { return DefensiveDamageMultiplier; }
+	
+	UFUNCTION()
+	void OnAnyDamageDealt(AActor* DamagedActor, float ActualDamage, AActor* DamageInstigator, EDamageType DamageType);
+	
+	UFUNCTION()
+	void RegisterEnemyDamageEvents(class AEnemyBase* Enemy);
 
 protected:
 
@@ -131,6 +146,14 @@ protected:
 	class ADivineAnchor* DivineAnchor;
 
 	bool bIsKatanaActive = true;
+	
+	// Defensive ability state
+	bool bDefensiveAbilityActive = false;
+	float DefensiveDamageMultiplier = 1.0f;
+	float DefensiveWindowTimer = 0.0f;
+	AActor* PendingAttacker = nullptr;
+	float PendingDamage = 0.0f;
+	EDamageType PendingDamageType = EDamageType::Physical;
 			
 
 protected:

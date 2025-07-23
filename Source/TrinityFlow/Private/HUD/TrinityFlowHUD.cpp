@@ -12,6 +12,7 @@
 
 ATrinityFlowHUD::ATrinityFlowHUD()
 {
+    PrimaryActorTick.bCanEverTick = true;
 }
 
 void ATrinityFlowHUD::BeginPlay()
@@ -19,6 +20,38 @@ void ATrinityFlowHUD::BeginPlay()
     Super::BeginPlay();
 
     PlayerCharacter = Cast<ATrinityFlowCharacter>(UGameplayStatics::GetPlayerPawn(GetWorld(), 0));
+    
+    // Subscribe to damage events from all actors
+    TArray<AActor*> AllActors;
+    UGameplayStatics::GetAllActorsOfClass(GetWorld(), AActor::StaticClass(), AllActors);
+    
+    for (AActor* Actor : AllActors)
+    {
+        if (UHealthComponent* HealthComp = Actor->FindComponentByClass<UHealthComponent>())
+        {
+            HealthComp->OnDamageDealt.AddDynamic(this, &ATrinityFlowHUD::OnDamageDealt);
+        }
+    }
+}
+
+void ATrinityFlowHUD::Tick(float DeltaTime)
+{
+    Super::Tick(DeltaTime);
+    
+    // Update floating damage numbers
+    for (int32 i = FloatingDamageNumbers.Num() - 1; i >= 0; i--)
+    {
+        FloatingDamageNumbers[i].LifeTime -= DeltaTime;
+        
+        // Move damage numbers up
+        FloatingDamageNumbers[i].WorldLocation.Z += 50.0f * DeltaTime;
+        
+        // Remove expired damage numbers
+        if (FloatingDamageNumbers[i].LifeTime <= 0.0f)
+        {
+            FloatingDamageNumbers.RemoveAt(i);
+        }
+    }
 }
 
 void ATrinityFlowHUD::DrawHUD()
@@ -32,13 +65,11 @@ void ATrinityFlowHUD::DrawHUD()
 
     ViewportSize = FVector2D(Canvas->SizeX, Canvas->SizeY);
 
-    // Update current target
-    CurrentTarget = PlayerCharacter->GetTargetInSight();
-
     // Draw all HUD elements
     DrawHealthBar();
     DrawCrosshair();
-    DrawTargetInfo();
+    DrawFloatingDamageNumbers();
+    DrawEnemyInfoAboveHeads();
     DrawPlayerInfo();
     DrawCombatState();
     DrawWeaponInfo();
@@ -80,62 +111,112 @@ void ATrinityFlowHUD::DrawCrosshair()
         CrosshairSize);
 }
 
-void ATrinityFlowHUD::DrawTargetInfo()
+void ATrinityFlowHUD::DrawEnemyInfoAboveHeads()
 {
-    if (!CurrentTarget)
+    // Find all enemies in the world
+    TArray<AActor*> FoundActors;
+    UGameplayStatics::GetAllActorsOfClass(GetWorld(), AEnemyBase::StaticClass(), FoundActors);
+
+    for (AActor* Actor : FoundActors)
     {
-        return;
+        if (AEnemyBase* Enemy = Cast<AEnemyBase>(Actor))
+        {
+            // Get enemy location and convert to screen space
+            FVector EnemyLocation = Enemy->GetActorLocation();
+            FVector HeadLocation = EnemyLocation + FVector(0, 0, 200.0f); // Offset above enemy
+            
+            FVector2D ScreenLocation;
+            APlayerController* PC = GetOwningPlayerController();
+            if (PC && UGameplayStatics::ProjectWorldToScreen(PC, HeadLocation, ScreenLocation))
+            {
+                // Only draw if on screen
+                if (ScreenLocation.X >= 0 && ScreenLocation.X <= ViewportSize.X &&
+                    ScreenLocation.Y >= 0 && ScreenLocation.Y <= ViewportSize.Y)
+                {
+                    DrawEnemyInfo(Enemy, ScreenLocation.X, ScreenLocation.Y);
+                }
+            }
+        }
     }
+}
 
-    float X = ViewportSize.X - InfoPanelWidth - 20.0f;
-    float Y = 100.0f;
+void ATrinityFlowHUD::DrawEnemyInfo(AEnemyBase* Enemy, float ScreenX, float ScreenY)
+{
+    if (!Enemy) return;
 
-    // Background
-    DrawRect(FLinearColor(0, 0, 0, 0.7f), X - 10, Y - 10, InfoPanelWidth + 20, 200);
-
-    DrawText(TEXT("=== TARGET INFO ==="), FLinearColor::Yellow, X, Y);
-    Y += LineHeight;
+    // Calculate distance to scale text appropriately
+    float Distance = FVector::Dist(PlayerCharacter->GetActorLocation(), Enemy->GetActorLocation());
+    
+    // Keep font size constant regardless of distance
+    // Base scale of 1.0 at any distance
+    float FontScale = 1.0f;
+    
+    float X = ScreenX - 100.0f; // Center the info
+    float Y = ScreenY;
+    
+    // Enemy name/type with shadow
+    FString EnemyType = Enemy->GetClass()->GetName();
+    EnemyType = EnemyType.Replace(TEXT("BP_"), TEXT(""));
+    EnemyType = EnemyType.Replace(TEXT("_C"), TEXT(""));
+    DrawText(EnemyType, FLinearColor::Black, X + 1, Y + 1, nullptr, FontScale);
+    DrawText(EnemyType, FLinearColor::Yellow, X, Y, nullptr, FontScale);
+    Y += 18;
 
     // Health info
-    if (UHealthComponent* HealthComp = CurrentTarget->FindComponentByClass<UHealthComponent>())
+    if (UHealthComponent* HealthComp = Enemy->FindComponentByClass<UHealthComponent>())
     {
-        FString HealthText = FString::Printf(TEXT("Health: %.0f/%.0f"), 
-            HealthComp->GetHealth(), HealthComp->GetMaxHealth());
-        DrawText(HealthText, FLinearColor::Red, X, Y);
-        Y += LineHeight;
-
-        // Health bar
+        // Health bar with outline for visibility
         float HealthPercentage = HealthComp->GetHealthPercentage();
-        DrawBar(X, Y, InfoPanelWidth - 20, 10, HealthPercentage, FLinearColor::Red);
-        Y += 15;
+        float BarWidth = 150.0f;
+        float BarHeight = 10.0f;
+        
+        // Draw black outline
+        DrawRect(FLinearColor::Black, X - 1, Y - 1, BarWidth + 2, BarHeight + 2);
+        // Draw health bar
+        DrawBar(X, Y, BarWidth, BarHeight, HealthPercentage, FLinearColor::Red);
+        Y += 14;
+        
+        // Health text with shadow for readability
+        FString HealthText = FString::Printf(TEXT("HP: %.0f/%.0f"), 
+            HealthComp->GetHealth(), HealthComp->GetMaxHealth());
+        // Draw shadow
+        DrawText(HealthText, FLinearColor::Black, X + 1, Y + 1, nullptr, FontScale * 0.9f);
+        // Draw text
+        DrawText(HealthText, FLinearColor::White, X, Y, nullptr, FontScale * 0.9f);
+        Y += 16;
 
-        // Resources
+        // Attack and Defense with shadow
         const FCharacterResources& Resources = HealthComp->GetResources();
-        DrawText(FString::Printf(TEXT("Attack: %.0f"), Resources.AttackPoint), FLinearColor(1.0f, 0.5f, 0.0f), X, Y);
-        Y += LineHeight;
-        DrawText(FString::Printf(TEXT("Defence: %.0f"), Resources.DefencePoint), FLinearColor::Blue, X, Y);
-        Y += LineHeight;
+        FString StatsText = FString::Printf(TEXT("ATK: %.0f  DEF: %.0f"), 
+            Resources.AttackPoint, Resources.DefencePoint);
+        DrawText(StatsText, FLinearColor::Black, X + 1, Y + 1, nullptr, FontScale * 0.9f);
+        DrawText(StatsText, FLinearColor(1.0f, 0.8f, 0.0f), X, Y, nullptr, FontScale * 0.9f);
+        Y += 16;
     }
 
-    // Tags
-    if (UTagComponent* TagComp = CurrentTarget->FindComponentByClass<UTagComponent>())
+    // Tags with shadow
+    if (UTagComponent* TagComp = Enemy->FindComponentByClass<UTagComponent>())
     {
-        FString TagsText = TEXT("Tags: ") + GetTagsString(TagComp->GetTags());
-        DrawText(TagsText, FLinearColor::Green, X, Y);
-        Y += LineHeight;
+        FString TagsText = GetTagsString(TagComp->GetTags());
+        DrawText(TagsText, FLinearColor::Black, X + 1, Y + 1, nullptr, FontScale * 0.9f);
+        DrawText(TagsText, FLinearColor::Green, X, Y, nullptr, FontScale * 0.9f);
+        Y += 16;
     }
 
-    // States
-    if (UStateComponent* StateComp = CurrentTarget->FindComponentByClass<UStateComponent>())
+    // States with shadow
+    if (UStateComponent* StateComp = Enemy->FindComponentByClass<UStateComponent>())
     {
-        FString StatesText = TEXT("States: ") + GetStatesString(StateComp->GetStates());
-        DrawText(StatesText, FLinearColor(0.0f, 1.0f, 1.0f), X, Y);
-        Y += LineHeight;
+        FString StatesText = GetStatesString(StateComp->GetStates());
+        DrawText(StatesText, FLinearColor::Black, X + 1, Y + 1, nullptr, FontScale * 0.9f);
+        DrawText(StatesText, FLinearColor(0.0f, 1.0f, 1.0f), X, Y, nullptr, FontScale * 0.9f);
+        Y += 16;
 
+        // Mark duration if marked
         if (StateComp->IsMarked())
         {
-            FString MarkedText = FString::Printf(TEXT("Marked: %.1fs"), StateComp->GetMarkedTimeRemaining());
-            DrawText(MarkedText, FLinearColor(0.5f, 0.0f, 1.0f), X, Y);
+            FString MarkedText = FString::Printf(TEXT("MARKED: %.1fs"), StateComp->GetMarkedTimeRemaining());
+            DrawText(MarkedText, FLinearColor::Black, X + 1, Y + 1, nullptr, FontScale);
+            DrawText(MarkedText, FLinearColor(1.0f, 0.0f, 1.0f), X, Y, nullptr, FontScale);
         }
     }
 }
@@ -145,26 +226,39 @@ void ATrinityFlowHUD::DrawPlayerInfo()
     float X = 20.0f;
     float Y = 100.0f;
 
-    // Background
-    DrawRect(FLinearColor(0, 0, 0, 0.7f), X - 10, Y - 10, InfoPanelWidth + 20, 150);
-
-    DrawText(TEXT("=== PLAYER INFO ==="), FLinearColor::Yellow, X, Y);
+    // Title with shadow
+    FString Title = TEXT("=== PLAYER INFO ===");
+    DrawText(Title, FLinearColor::Black, X + 1, Y + 1);
+    DrawText(Title, FLinearColor::Yellow, X, Y);
     Y += LineHeight;
 
     if (UHealthComponent* HealthComp = PlayerCharacter->GetHealthComponent())
     {
         const FCharacterResources& Resources = HealthComp->GetResources();
-        DrawText(FString::Printf(TEXT("Health: %.0f/%.0f"), Resources.Health, Resources.MaxHealth), FLinearColor::Red, X, Y);
+        
+        // Health with shadow
+        FString HealthText = FString::Printf(TEXT("Health: %.0f/%.0f"), Resources.Health, Resources.MaxHealth);
+        DrawText(HealthText, FLinearColor::Black, X + 1, Y + 1);
+        DrawText(HealthText, FLinearColor::Red, X, Y);
         Y += LineHeight;
-        DrawText(FString::Printf(TEXT("Attack: %.0f"), Resources.AttackPoint), FLinearColor(1.0f, 0.5f, 0.0f), X, Y);
+        
+        // Attack with shadow
+        FString AttackText = FString::Printf(TEXT("Attack: %.0f"), Resources.AttackPoint);
+        DrawText(AttackText, FLinearColor::Black, X + 1, Y + 1);
+        DrawText(AttackText, FLinearColor(1.0f, 0.5f, 0.0f), X, Y);
         Y += LineHeight;
-        DrawText(FString::Printf(TEXT("Defence: %.0f"), Resources.DefencePoint), FLinearColor::Blue, X, Y);
+        
+        // Defence with shadow
+        FString DefenceText = FString::Printf(TEXT("Defence: %.0f"), Resources.DefencePoint);
+        DrawText(DefenceText, FLinearColor::Black, X + 1, Y + 1);
+        DrawText(DefenceText, FLinearColor::Blue, X, Y);
         Y += LineHeight;
     }
 
     if (UTagComponent* TagComp = PlayerCharacter->GetTagComponent())
     {
         FString TagsText = TEXT("Tags: ") + GetTagsString(TagComp->GetTags());
+        DrawText(TagsText, FLinearColor::Black, X + 1, Y + 1);
         DrawText(TagsText, FLinearColor::Green, X, Y);
     }
 }
@@ -283,4 +377,79 @@ FString ATrinityFlowHUD::GetStatesString(ECharacterState InStates)
     if (EnumHasAnyFlags(InStates, ECharacterState::Marked)) StateStrings.Add(TEXT("marked"));
     
     return FString::Join(StateStrings, TEXT(", "));
+}
+
+void ATrinityFlowHUD::OnDamageDealt(AActor* DamagedActor, float ActualDamage, AActor* DamageInstigator, EDamageType DamageType)
+{
+    // Only show damage numbers for damage dealt by the player
+    if (DamageInstigator == PlayerCharacter && DamagedActor)
+    {
+        // Check if this is echo damage by seeing if the damaged actor is marked
+        bool bIsEcho = false;
+        if (UStateComponent* StateComp = DamagedActor->FindComponentByClass<UStateComponent>())
+        {
+            // If the damaged actor is marked and it's soul damage, it's likely echo damage
+            bIsEcho = StateComp->IsMarked() && DamageType == EDamageType::Soul;
+        }
+        
+        AddFloatingDamageNumber(DamagedActor->GetActorLocation(), ActualDamage, bIsEcho);
+    }
+}
+
+void ATrinityFlowHUD::AddFloatingDamageNumber(const FVector& Location, float Damage, bool bIsEcho)
+{
+    FFloatingDamageNumber NewNumber;
+    NewNumber.WorldLocation = Location + FVector(FMath::RandRange(-30.0f, 30.0f), FMath::RandRange(-30.0f, 30.0f), 100.0f);
+    NewNumber.Damage = Damage;
+    NewNumber.LifeTime = 2.0f;
+    NewNumber.bIsEcho = bIsEcho;
+    
+    // Set color based on damage type
+    if (bIsEcho)
+    {
+        NewNumber.Color = FLinearColor(1.0f, 0.0f, 1.0f); // Purple for echo damage
+    }
+    else
+    {
+        NewNumber.Color = FLinearColor(1.0f, 1.0f, 0.0f); // Yellow for normal damage
+    }
+    
+    FloatingDamageNumbers.Add(NewNumber);
+}
+
+void ATrinityFlowHUD::DrawFloatingDamageNumbers()
+{
+    for (const FFloatingDamageNumber& DamageNumber : FloatingDamageNumbers)
+    {
+        FVector2D ScreenLocation;
+        APlayerController* PC = GetOwningPlayerController();
+        
+        if (PC && UGameplayStatics::ProjectWorldToScreen(PC, DamageNumber.WorldLocation, ScreenLocation))
+        {
+            // Only draw if on screen
+            if (ScreenLocation.X >= 0 && ScreenLocation.X <= ViewportSize.X &&
+                ScreenLocation.Y >= 0 && ScreenLocation.Y <= ViewportSize.Y)
+            {
+                // Calculate fade based on lifetime
+                float Alpha = FMath::Clamp(DamageNumber.LifeTime / 0.5f, 0.0f, 1.0f);
+                FLinearColor DisplayColor = DamageNumber.Color;
+                DisplayColor.A = Alpha;
+                
+                // Calculate size based on damage amount
+                float FontScale = FMath::Clamp(1.0f + (DamageNumber.Damage / 100.0f), 1.0f, 2.0f);
+                
+                // Format damage text
+                FString DamageText = FString::Printf(TEXT("%.0f"), DamageNumber.Damage);
+                if (DamageNumber.bIsEcho)
+                {
+                    DamageText = TEXT("ECHO ") + DamageText;
+                }
+                
+                // Draw shadow
+                DrawText(DamageText, FLinearColor(0, 0, 0, Alpha), ScreenLocation.X + 2, ScreenLocation.Y + 2, nullptr, FontScale);
+                // Draw damage number
+                DrawText(DamageText, DisplayColor, ScreenLocation.X, ScreenLocation.Y, nullptr, FontScale);
+            }
+        }
+    }
 }
