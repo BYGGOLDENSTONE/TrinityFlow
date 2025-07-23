@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Logging/LogMacros.h"
+#include "Core/TrinityFlowTypes.h"
 #include "TrinityFlowCharacter.generated.h"
 
 class USpringArmComponent;
@@ -44,8 +45,45 @@ class ATrinityFlowCharacter : public ACharacter
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* LookAction;
 
+	/** Attack Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* AttackAction;
+
+	/** Ability Q Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* AbilityQAction;
+
+	/** Ability E Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* AbilityEAction;
+
+	/** Switch Weapon Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* SwitchWeaponAction;
+
 public:
 	ATrinityFlowCharacter();
+
+	virtual void BeginPlay() override;
+	virtual void Tick(float DeltaTime) override;
+
+	UFUNCTION()
+	class UHealthComponent* GetHealthComponent() const { return HealthComponent; }
+
+	UFUNCTION()
+	class UStateComponent* GetStateComponent() const { return StateComponent; }
+
+	UFUNCTION()
+	class UTagComponent* GetTagComponent() const { return TagComponent; }
+
+	UFUNCTION()
+	AActor* GetTargetInSight();
+
+	UFUNCTION()
+	bool IsKatanaActive() const { return bIsKatanaActive; }
+
+	UFUNCTION()
+	class AWeaponBase* GetCurrentWeapon() const { return CurrentWeapon; }
 	
 
 protected:
@@ -55,6 +93,44 @@ protected:
 
 	/** Called for looking input */
 	void Look(const FInputActionValue& Value);
+
+	/** Called for attack input */
+	void Attack();
+
+	/** Called for ability inputs */
+	void AbilityQ();
+	void AbilityE();
+
+	/** Called for weapon switch */
+	void SwitchWeapon();
+
+	/** Called for defensive ability (contextual jump/defense) */
+	void DefensiveAbility();
+
+	/** Components */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	class UHealthComponent* HealthComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	class UTagComponent* TagComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	class UStateComponent* StateComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	class UAbilityComponent* AbilityComponent;
+
+	/** Weapons */
+	UPROPERTY()
+	class AWeaponBase* CurrentWeapon;
+
+	UPROPERTY()
+	class AOverrideKatana* OverrideKatana;
+
+	UPROPERTY()
+	class ADivineAnchor* DivineAnchor;
+
+	bool bIsKatanaActive = true;
 			
 
 protected:

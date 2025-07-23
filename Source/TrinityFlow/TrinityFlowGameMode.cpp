@@ -2,14 +2,14 @@
 
 #include "TrinityFlowGameMode.h"
 #include "TrinityFlowCharacter.h"
+#include "Player/TrinityFlowPlayerController.h"
+#include "HUD/TrinityFlowHUD.h"
 #include "UObject/ConstructorHelpers.h"
 
 ATrinityFlowGameMode::ATrinityFlowGameMode()
 {
-	// set default pawn class to our Blueprinted character
-	static ConstructorHelpers::FClassFinder<APawn> PlayerPawnBPClass(TEXT("/Game/ThirdPerson/Blueprints/BP_ThirdPersonCharacter"));
-	if (PlayerPawnBPClass.Class != NULL)
-	{
-		DefaultPawnClass = PlayerPawnBPClass.Class;
-	}
+	// Set default classes
+	DefaultPawnClass = ATrinityFlowCharacter::StaticClass();
+	PlayerControllerClass = ATrinityFlowPlayerController::StaticClass();
+	HUDClass = ATrinityFlowHUD::StaticClass();
 }

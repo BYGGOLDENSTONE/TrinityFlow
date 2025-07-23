@@ -10,6 +10,14 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
+#include "Core/HealthComponent.h"
+#include "Core/TagComponent.h"
+#include "Core/StateComponent.h"
+#include "Combat/AbilityComponent.h"
+#include "Player/OverrideKatana.h"
+#include "Player/DivineAnchor.h"
+#include "DrawDebugHelpers.h"
+#include "Engine/World.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -52,6 +60,14 @@ ATrinityFlowCharacter::ATrinityFlowCharacter()
 
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
+
+	// Create components
+	HealthComponent = CreateDefaultSubobject<UHealthComponent>(TEXT("HealthComponent"));
+	TagComponent = CreateDefaultSubobject<UTagComponent>(TEXT("TagComponent"));
+	StateComponent = CreateDefaultSubobject<UStateComponent>(TEXT("StateComponent"));
+	AbilityComponent = CreateDefaultSubobject<UAbilityComponent>(TEXT("AbilityComponent"));
+
+	PrimaryActorTick.bCanEverTick = true;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -76,8 +92,8 @@ void ATrinityFlowCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInp
 	// Set up action bindings
 	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent)) {
 		
-		// Jumping
-		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &ACharacter::Jump);
+		// Jumping / Defensive Ability (contextual)
+		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &ATrinityFlowCharacter::DefensiveAbility);
 		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
 
 		// Moving
@@ -85,6 +101,12 @@ void ATrinityFlowCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInp
 
 		// Looking
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ATrinityFlowCharacter::Look);
+
+		// Combat
+		EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Started, this, &ATrinityFlowCharacter::Attack);
+		EnhancedInputComponent->BindAction(AbilityQAction, ETriggerEvent::Started, this, &ATrinityFlowCharacter::AbilityQ);
+		EnhancedInputComponent->BindAction(AbilityEAction, ETriggerEvent::Started, this, &ATrinityFlowCharacter::AbilityE);
+		EnhancedInputComponent->BindAction(SwitchWeaponAction, ETriggerEvent::Started, this, &ATrinityFlowCharacter::SwitchWeapon);
 	}
 	else
 	{
@@ -126,4 +148,130 @@ void ATrinityFlowCharacter::Look(const FInputActionValue& Value)
 		AddControllerYawInput(LookAxisVector.X);
 		AddControllerPitchInput(LookAxisVector.Y);
 	}
+}
+
+void ATrinityFlowCharacter::BeginPlay()
+{
+	Super::BeginPlay();
+
+	// Setup player resources and tags
+	if (HealthComponent)
+	{
+		FCharacterResources PlayerResources(200.0f, 20.0f, 20.0f);
+		HealthComponent->SetResources(PlayerResources);
+	}
+
+	if (TagComponent)
+	{
+		TagComponent->SetTags(ECharacterTag::HaveSoul | ECharacterTag::Armored);
+	}
+
+	// Spawn weapons
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.Owner = this;
+	SpawnParams.Instigator = this;
+
+	OverrideKatana = GetWorld()->SpawnActor<AOverrideKatana>(AOverrideKatana::StaticClass(), GetActorLocation(), GetActorRotation(), SpawnParams);
+	if (OverrideKatana)
+	{
+		OverrideKatana->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, TEXT("hand_r"));
+	}
+
+	DivineAnchor = GetWorld()->SpawnActor<ADivineAnchor>(ADivineAnchor::StaticClass(), GetActorLocation(), GetActorRotation(), SpawnParams);
+	if (DivineAnchor)
+	{
+		DivineAnchor->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, TEXT("hand_r"));
+		DivineAnchor->SetActorHiddenInGame(true);
+	}
+
+	CurrentWeapon = OverrideKatana;
+}
+
+void ATrinityFlowCharacter::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+}
+
+void ATrinityFlowCharacter::Attack()
+{
+	if (CurrentWeapon)
+	{
+		AActor* Target = GetTargetInSight();
+		CurrentWeapon->BasicAttack(Target);
+	}
+}
+
+void ATrinityFlowCharacter::AbilityQ()
+{
+	if (CurrentWeapon)
+	{
+		AActor* Target = GetTargetInSight();
+		CurrentWeapon->AbilityQ(Target);
+	}
+}
+
+void ATrinityFlowCharacter::AbilityE()
+{
+	if (CurrentWeapon)
+	{
+		AActor* Target = GetTargetInSight();
+		CurrentWeapon->AbilityE(Target);
+	}
+}
+
+void ATrinityFlowCharacter::SwitchWeapon()
+{
+	if (bIsKatanaActive)
+	{
+		// Switch to Divine Anchor
+		if (OverrideKatana) OverrideKatana->SetActorHiddenInGame(true);
+		if (DivineAnchor) DivineAnchor->SetActorHiddenInGame(false);
+		CurrentWeapon = DivineAnchor;
+		bIsKatanaActive = false;
+	}
+	else
+	{
+		// Switch to Override Katana
+		if (DivineAnchor) DivineAnchor->SetActorHiddenInGame(true);
+		if (OverrideKatana) OverrideKatana->SetActorHiddenInGame(false);
+		CurrentWeapon = OverrideKatana;
+		bIsKatanaActive = true;
+	}
+}
+
+void ATrinityFlowCharacter::DefensiveAbility()
+{
+	if (StateComponent && StateComponent->HasState(ECharacterState::Combat))
+	{
+		// In combat - use defensive ability
+		if (CurrentWeapon)
+		{
+			CurrentWeapon->DefensiveAbility();
+		}
+	}
+	else
+	{
+		// Not in combat - jump
+		Jump();
+	}
+}
+
+AActor* ATrinityFlowCharacter::GetTargetInSight()
+{
+	FVector CameraLocation;
+	FRotator CameraRotation;
+	GetController()->GetPlayerViewPoint(CameraLocation, CameraRotation);
+
+	FVector TraceEnd = CameraLocation + (CameraRotation.Vector() * 10000.0f);
+
+	FHitResult Hit;
+	FCollisionQueryParams QueryParams;
+	QueryParams.AddIgnoredActor(this);
+
+	if (GetWorld()->LineTraceSingleByChannel(Hit, CameraLocation, TraceEnd, ECC_Pawn, QueryParams))
+	{
+		return Hit.GetActor();
+	}
+
+	return nullptr;
 }
