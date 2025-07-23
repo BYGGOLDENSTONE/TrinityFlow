@@ -3,7 +3,7 @@
 #include "Core/TagComponent.h"
 #include "Core/StateComponent.h"
 #include "Core/TrinityFlowStatsSubsystem.h"
-#include "Data/TrinityFlowWeaponStats.h"
+#include "Data/TrinityFlowAnchorStats.h"
 #include "DrawDebugHelpers.h"
 #include "Engine/World.h"
 #include "Engine/Engine.h"
@@ -34,7 +34,7 @@ void ADivineAnchor::BeginPlay()
     {
         if (UTrinityFlowStatsSubsystem* StatsSubsystem = GameInstance->GetSubsystem<UTrinityFlowStatsSubsystem>())
         {
-            WeaponStats = StatsSubsystem->GetWeaponStats("DivineAnchor");
+            WeaponStats = StatsSubsystem->GetAnchorStats("DivineAnchor");
             if (WeaponStats)
             {
                 // Apply base weapon stats
@@ -43,8 +43,8 @@ void ADivineAnchor::BeginPlay()
                 BasicDamageType = WeaponStats->BasicDamageType;
                 
                 // Apply ability cooldowns
-                AbilityQCooldown = WeaponStats->AnchorStats.GravityPullCooldown;
-                AbilityECooldown = WeaponStats->AnchorStats.HolyGravityCooldown;
+                AbilityQCooldown = WeaponStats->AbilityQCooldown;
+                AbilityECooldown = WeaponStats->AbilityECooldown;
                 
                 // Cache anchor stats pointer
                 AnchorStats = &WeaponStats->AnchorStats;

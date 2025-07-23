@@ -1,7 +1,9 @@
 #include "Core/TrinityFlowStatsSubsystem.h"
 #include "Core/TrinityFlowGameInstance.h"
 #include "Data/TrinityFlowCharacterStats.h"
-#include "Data/TrinityFlowWeaponStats.h"
+#include "Data/TrinityFlowWeaponStatsBase.h"
+#include "Data/TrinityFlowKatanaStats.h"
+#include "Data/TrinityFlowAnchorStats.h"
 #include "Engine/DataTable.h"
 #include "Engine/Engine.h"
 
@@ -57,9 +59,9 @@ UTrinityFlowCharacterStats* UTrinityFlowStatsSubsystem::GetPlayerStats() const
     return nullptr;
 }
 
-UTrinityFlowWeaponStats* UTrinityFlowStatsSubsystem::GetWeaponStats(FName WeaponID) const
+UTrinityFlowWeaponStatsBase* UTrinityFlowStatsSubsystem::GetWeaponStats(FName WeaponID) const
 {
-    if (UTrinityFlowWeaponStats* const* Found = LoadedWeaponStats.Find(WeaponID))
+    if (UTrinityFlowWeaponStatsBase* const* Found = LoadedWeaponStats.Find(WeaponID))
     {
         return *Found;
     }
@@ -75,6 +77,24 @@ UTrinityFlowWeaponStats* UTrinityFlowStatsSubsystem::GetWeaponStats(FName Weapon
     }
     
     UE_LOG(LogTemp, Warning, TEXT("Weapon stats not found for ID: %s"), *WeaponID.ToString());
+    return nullptr;
+}
+
+UTrinityFlowKatanaStats* UTrinityFlowStatsSubsystem::GetKatanaStats(FName WeaponID) const
+{
+    if (UTrinityFlowWeaponStatsBase* BaseStats = GetWeaponStats(WeaponID))
+    {
+        return Cast<UTrinityFlowKatanaStats>(BaseStats);
+    }
+    return nullptr;
+}
+
+UTrinityFlowAnchorStats* UTrinityFlowStatsSubsystem::GetAnchorStats(FName WeaponID) const
+{
+    if (UTrinityFlowWeaponStatsBase* BaseStats = GetWeaponStats(WeaponID))
+    {
+        return Cast<UTrinityFlowAnchorStats>(BaseStats);
+    }
     return nullptr;
 }
 
@@ -128,7 +148,7 @@ void UTrinityFlowStatsSubsystem::LoadWeaponStats()
     // Load default weapon stats
     if (DefaultKatanaStats.IsValid())
     {
-        if (UTrinityFlowWeaponStats* KatanaStats = DefaultKatanaStats.LoadSynchronous())
+        if (UTrinityFlowKatanaStats* KatanaStats = DefaultKatanaStats.LoadSynchronous())
         {
             LoadedWeaponStats.Add("OverrideKatana", KatanaStats);
             UE_LOG(LogTemp, Log, TEXT("Loaded default Katana stats"));
@@ -141,7 +161,7 @@ void UTrinityFlowStatsSubsystem::LoadWeaponStats()
     
     if (DefaultAnchorStats.IsValid())
     {
-        if (UTrinityFlowWeaponStats* AnchorStats = DefaultAnchorStats.LoadSynchronous())
+        if (UTrinityFlowAnchorStats* AnchorStats = DefaultAnchorStats.LoadSynchronous())
         {
             LoadedWeaponStats.Add("DivineAnchor", AnchorStats);
             UE_LOG(LogTemp, Log, TEXT("Loaded default Anchor stats"));
@@ -164,7 +184,7 @@ void UTrinityFlowStatsSubsystem::LoadWeaponStats()
             {
                 if (Row && Row->StatsAsset.IsValid())
                 {
-                    if (UTrinityFlowWeaponStats* Stats = Row->StatsAsset.LoadSynchronous())
+                    if (UTrinityFlowWeaponStatsBase* Stats = Row->StatsAsset.LoadSynchronous())
                     {
                         LoadedWeaponStats.Add(Stats->WeaponID, Stats);
                         UE_LOG(LogTemp, Log, TEXT("Loaded weapon stats: %s"), *Stats->WeaponID.ToString());

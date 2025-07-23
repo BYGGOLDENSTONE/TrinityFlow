@@ -31,10 +31,10 @@ public:
     class UTrinityFlowCharacterStats* DefaultPlayerStats;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stats Configuration")
-    class UTrinityFlowWeaponStats* DefaultKatanaStats;
+    class UTrinityFlowKatanaStats* DefaultKatanaStats;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stats Configuration")
-    class UTrinityFlowWeaponStats* DefaultAnchorStats;
+    class UTrinityFlowAnchorStats* DefaultAnchorStats;
 
 private:
     void ConfigureStatsSubsystem();

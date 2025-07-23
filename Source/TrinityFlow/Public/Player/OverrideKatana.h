@@ -4,6 +4,9 @@
 #include "Combat/WeaponBase.h"
 #include "OverrideKatana.generated.h"
 
+class UTrinityFlowKatanaStats;
+struct FKatanaAbilityStats;
+
 UCLASS()
 class TRINITYFLOW_API AOverrideKatana : public AWeaponBase
 {
@@ -22,6 +25,12 @@ public:
     void OnPerfectDodge();
 
 protected:
+    // Cached stats reference
+    UPROPERTY()
+    UTrinityFlowKatanaStats* WeaponStats;
+    
+    const FKatanaAbilityStats* KatanaStats;
+
     UPROPERTY()
     class UAbilityComponent* AbilityComponent;
 

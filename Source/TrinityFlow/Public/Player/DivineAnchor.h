@@ -4,7 +4,7 @@
 #include "Combat/WeaponBase.h"
 #include "DivineAnchor.generated.h"
 
-class UTrinityFlowWeaponStats;
+class UTrinityFlowAnchorStats;
 struct FAnchorAbilityStats;
 
 UCLASS()
@@ -25,7 +25,7 @@ public:
 protected:
     // Cached stats reference
     UPROPERTY()
-    UTrinityFlowWeaponStats* WeaponStats;
+    UTrinityFlowAnchorStats* WeaponStats;
     
     const FAnchorAbilityStats* AnchorStats;
     UPROPERTY()

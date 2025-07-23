@@ -6,7 +6,9 @@
 #include "TrinityFlowStatsSubsystem.generated.h"
 
 class UTrinityFlowCharacterStats;
-class UTrinityFlowWeaponStats;
+class UTrinityFlowWeaponStatsBase;
+class UTrinityFlowKatanaStats;
+class UTrinityFlowAnchorStats;
 
 /**
  * Row structure for character stats data table
@@ -29,7 +31,7 @@ struct FWeaponStatsTableRow : public FTableRowBase
     GENERATED_BODY()
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly)
-    TSoftObjectPtr<UTrinityFlowWeaponStats> StatsAsset;
+    TSoftObjectPtr<UTrinityFlowWeaponStatsBase> StatsAsset;
 };
 
 /**
@@ -58,7 +60,14 @@ public:
 
     // Weapon Stats Access
     UFUNCTION(BlueprintCallable, Category = "Stats")
-    UTrinityFlowWeaponStats* GetWeaponStats(FName WeaponID) const;
+    UTrinityFlowWeaponStatsBase* GetWeaponStats(FName WeaponID) const;
+
+    // Type-safe weapon stats getters
+    UFUNCTION(BlueprintCallable, Category = "Stats")
+    UTrinityFlowKatanaStats* GetKatanaStats(FName WeaponID) const;
+
+    UFUNCTION(BlueprintCallable, Category = "Stats")
+    UTrinityFlowAnchorStats* GetAnchorStats(FName WeaponID) const;
 
     // Reload stats (useful for runtime tweaking)
     UFUNCTION(BlueprintCallable, CallInEditor, Category = "Stats|Debug")
@@ -77,10 +86,10 @@ protected:
     TSoftObjectPtr<UTrinityFlowCharacterStats> DefaultPlayerStats;
 
     UPROPERTY(EditDefaultsOnly, Category = "Configuration")
-    TSoftObjectPtr<UTrinityFlowWeaponStats> DefaultKatanaStats;
+    TSoftObjectPtr<UTrinityFlowKatanaStats> DefaultKatanaStats;
 
     UPROPERTY(EditDefaultsOnly, Category = "Configuration")
-    TSoftObjectPtr<UTrinityFlowWeaponStats> DefaultAnchorStats;
+    TSoftObjectPtr<UTrinityFlowAnchorStats> DefaultAnchorStats;
 
 private:
     // Cached stats for performance
@@ -88,7 +97,7 @@ private:
     TMap<FName, UTrinityFlowCharacterStats*> LoadedCharacterStats;
 
     UPROPERTY()
-    TMap<FName, UTrinityFlowWeaponStats*> LoadedWeaponStats;
+    TMap<FName, UTrinityFlowWeaponStatsBase*> LoadedWeaponStats;
 
     void LoadCharacterStats();
     void LoadWeaponStats();

@@ -2,11 +2,15 @@
 #include "Combat/AbilityComponent.h"
 #include "Core/HealthComponent.h"
 #include "Core/StateComponent.h"
+#include "Core/TrinityFlowStatsSubsystem.h"
+#include "Data/TrinityFlowKatanaStats.h"
 #include "DrawDebugHelpers.h"
 #include "Engine/World.h"
+#include "Engine/Engine.h"
 
 AOverrideKatana::AOverrideKatana()
 {
+    // Default values - will be overridden by stats subsystem
     BasicAttackRange = 300.0f;
     BasicAttackSpeed = 1.0f;
     BasicDamageType = EDamageType::Physical;
@@ -20,6 +24,36 @@ AOverrideKatana::AOverrideKatana()
 void AOverrideKatana::BeginPlay()
 {
     Super::BeginPlay();
+    
+    // Get stats from subsystem
+    if (UGameInstance* GameInstance = GetGameInstance())
+    {
+        if (UTrinityFlowStatsSubsystem* StatsSubsystem = GameInstance->GetSubsystem<UTrinityFlowStatsSubsystem>())
+        {
+            WeaponStats = StatsSubsystem->GetKatanaStats("OverrideKatana");
+            if (WeaponStats)
+            {
+                // Apply base weapon stats
+                BasicAttackRange = WeaponStats->BasicAttackRange;
+                BasicAttackSpeed = WeaponStats->BasicAttackSpeed;
+                BasicDamageType = WeaponStats->BasicDamageType;
+                
+                // Apply ability cooldowns
+                AbilityQCooldown = WeaponStats->AbilityQCooldown;
+                AbilityECooldown = WeaponStats->AbilityECooldown;
+                
+                // Cache katana stats pointer
+                KatanaStats = &WeaponStats->KatanaStats;
+                
+                UE_LOG(LogTemp, Log, TEXT("Override Katana loaded stats: Range=%.0f, Speed=%.1f"), 
+                    BasicAttackRange, BasicAttackSpeed);
+            }
+            else
+            {
+                UE_LOG(LogTemp, Warning, TEXT("Failed to load Override Katana stats from subsystem"));
+            }
+        }
+    }
     
     // Get the ability component from the owner (player character)
     if (GetOwner())
@@ -49,7 +83,8 @@ void AOverrideKatana::AbilityQ(AActor* Target)
     }
 
     float Distance = FVector::Dist(GetActorLocation(), Target->GetActorLocation());
-    if (Distance > 4000.0f) // Echoes of Data range
+    float EchoesRange = KatanaStats ? KatanaStats->EchoesRange : 4000.0f;
+    if (Distance > EchoesRange)
     {
         return;
     }
@@ -79,7 +114,8 @@ void AOverrideKatana::AbilityE(AActor* Target)
     }
 
     float Distance = FVector::Dist(GetActorLocation(), Target->GetActorLocation());
-    if (Distance > 600.0f) // Code Break range
+    float CodeBreakRange = KatanaStats ? KatanaStats->CodeBreakRange : 600.0f;
+    if (Distance > CodeBreakRange)
     {
         return;
     }
@@ -138,7 +174,8 @@ void AOverrideKatana::Tick(float DeltaTime)
     {
         DodgeWindowTimer += DeltaTime;
         
-        if (DodgeWindowTimer >= 1.5f)
+        float DodgeWindowDuration = KatanaStats ? KatanaStats->DodgeWindowDuration : 1.5f;
+        if (DodgeWindowTimer >= DodgeWindowDuration)
         {
             // Attack completed, deal full damage
             bDodgeWindowActive = false;
@@ -176,14 +213,18 @@ bool AOverrideKatana::ProcessDodge(float& OutDamageMultiplier)
     }
 
     // Check timing window
-    if (DodgeWindowTimer <= 0.75f)
+    float PerfectDodgeStart = KatanaStats ? KatanaStats->PerfectDodgeStart : 0.75f;
+    float DodgeWindowDuration = KatanaStats ? KatanaStats->DodgeWindowDuration : 1.5f;
+    float ModerateDamageMultiplier = KatanaStats ? KatanaStats->ModerateDodgeDamageMultiplier : 0.5f;
+    
+    if (DodgeWindowTimer <= PerfectDodgeStart)
     {
-        // Moderate dodge (0-0.75s) - half damage
-        OutDamageMultiplier = 0.5f;
+        // Moderate dodge - reduced damage
+        OutDamageMultiplier = ModerateDamageMultiplier;
     }
-    else if (DodgeWindowTimer <= 1.5f)
+    else if (DodgeWindowTimer <= DodgeWindowDuration)
     {
-        // Perfect dodge (0.75-1.5s) - no damage
+        // Perfect dodge - no damage
         OutDamageMultiplier = 0.0f;
     }
     else
