@@ -2,7 +2,69 @@
 
 All notable changes to TrinityFlow are documented in this file.
 
-## [Latest] - 2025-07-23 (Update 2)
+## [Latest] - 2025-07-24
+
+### Added
+- **Enemy AI State Machine System**
+  - Pure C++ implementation of state-based AI
+  - Three core states: Idle, Chase, and Attack
+  - Smooth transitions between states based on player detection and range
+  - Integration with Unreal's navigation system for pathfinding
+  
+- **AI States Implementation**
+  - `UAIState` base class with Enter/Update/Exit pattern
+  - `UAIState_Idle`: Enemy patrols or waits, detects players within sight range
+  - `UAIState_Chase`: Enemy pursues player using navigation mesh pathfinding
+  - `UAIState_Attack`: Enemy attacks when player is within attack range
+  
+- **Enemy AI Controller**
+  - `AEnemyAIController` handles movement requests and pathfinding
+  - Automatic navigation mesh integration
+  - Support for FloatingPawnMovement
+  
+- **Movement System**
+  - Added FloatingPawnMovement component to all enemies
+  - Configurable movement speed in enemy stats
+  - Proper collision settings for navigation
+  
+- **Animation Support**
+  - Added `GetCurrentSpeed()` and `IsMoving()` blueprint functions
+  - Velocity-based animation system ready for implementation
+  - Movement component properly updates velocity for animation blueprints
+
+### Changed
+- **Enemy Base Class Updates**
+  - Integrated AI state machine component
+  - Added movement component and AI controller support
+  - Removed hardcoded combat behavior in favor of state machine
+  - Made `bHasSeenPlayer` accessible for state management
+  
+- **Build Configuration**
+  - Added AIModule and NavigationSystem dependencies
+  - Proper module configuration for AI features
+
+### Fixed
+- **Combat State Manager Integration**
+  - Enemies now properly trigger combat state when detecting player
+  - State transitions correctly notify combat manager
+  
+- **Movement Issues**
+  - Fixed FloatingPawnMovement not processing input
+  - Removed plane constraints that caused positioning issues
+  - Proper movement component initialization and activation
+
+### Technical Details
+- **State Machine Architecture**
+  - Component-based design for easy integration
+  - Blueprint-compatible state classes
+  - Configurable state transitions through Blueprint
+  
+- **Navigation Integration**
+  - Full support for Unreal's navigation mesh
+  - Pathfinding with obstacle avoidance
+  - Dynamic path updates during chase
+
+## [Previous] - 2025-07-23 (Update 2)
 
 ### Fixed
 - **Tag System in Editor**

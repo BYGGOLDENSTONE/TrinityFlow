@@ -34,6 +34,13 @@ TrinityFlow is a fast-paced action game where players wield two distinct weapons
 - **Phase Enemy**: Ghost type, immune to physical damage
 - **Shielded Tank Robot**: Mechanical, immune to soul damage
 
+### Enemy AI System
+- **State Machine Architecture**: Pure C++ implementation for performance
+- **Intelligent Behavior**: Enemies detect, chase, and attack players
+- **Navigation Integration**: Full pathfinding with obstacle avoidance
+- **Configurable Parameters**: Sight range, attack range, movement speed
+- **Animation Support**: Velocity-based system ready for animation blueprints
+
 ### Tag System
 - **Shielded**: Blocks frontal physical damage
 - **Armored**: Reduces physical damage by defense percentage

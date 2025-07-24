@@ -35,6 +35,12 @@ protected:
     UPROPERTY(EditDefaultsOnly, Category = "Components")
     class USkeletalMeshComponent* MeshComponent;
 
+    UPROPERTY(EditDefaultsOnly, Category = "Components")
+    class UAIStateMachine* AIStateMachine;
+
+    UPROPERTY(EditDefaultsOnly, Category = "Components")
+    class UFloatingPawnMovement* MovementComponent;
+
     // Stats Configuration
     UPROPERTY(EditDefaultsOnly, Category = "Stats")
     FName EnemyStatsID = "StandardEnemy";
@@ -53,10 +59,13 @@ protected:
     bool bIsAreaDamage = false;
 
     UPROPERTY()
-    class ATrinityFlowCharacter* PlayerTarget;
+    class APawn* PlayerTarget;
 
+public:
     UPROPERTY()
     bool bHasSeenPlayer = false;
+
+protected:
 
     virtual void SetupEnemy();
     virtual void OnDeath();
@@ -70,4 +79,46 @@ protected:
 
     UFUNCTION()
     void OnDeathEvent();
+
+public:
+    // Getters for AI
+    UFUNCTION(BlueprintPure, Category = "AI")
+    float GetSightRange() const { return SightRange; }
+
+    UFUNCTION(BlueprintPure, Category = "AI")
+    float GetAttackRange() const { return AttackRange; }
+
+    UFUNCTION(BlueprintPure, Category = "AI")
+    APawn* GetTargetPlayer() const { return PlayerTarget; }
+
+    UFUNCTION(BlueprintCallable, Category = "AI")
+    void SetTargetPlayer(APawn* NewTarget) { PlayerTarget = NewTarget; }
+
+    UFUNCTION(BlueprintCallable, Category = "AI")
+    void FaceTarget(AActor* Target);
+
+    UFUNCTION(BlueprintPure, Category = "Components")
+    UStateComponent* GetStateComponent() const { return StateComponent; }
+
+    UFUNCTION(BlueprintPure, Category = "Components")
+    UCombatComponent* GetCombatComponent() const { return CombatComponent; }
+
+    UFUNCTION(BlueprintPure, Category = "AI")
+    UAIStateMachine* GetAIStateMachine() const { return AIStateMachine; }
+    
+    UFUNCTION(BlueprintPure, Category = "Components")
+    class UFloatingPawnMovement* GetFloatingMovementComponent() const { return MovementComponent; }
+
+    UPROPERTY(EditDefaultsOnly, Category = "AI")
+    TSubclassOf<class UAIState> InitialStateClass;
+
+    UPROPERTY(EditDefaultsOnly, Category = "AI")
+    float MovementSpeed = 300.0f;
+
+    // Animation helpers
+    UFUNCTION(BlueprintPure, Category = "Animation")
+    float GetCurrentSpeed() const;
+    
+    UFUNCTION(BlueprintPure, Category = "Animation")
+    bool IsMoving() const;
 };

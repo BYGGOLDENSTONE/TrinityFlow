@@ -496,10 +496,130 @@ UTrinityFlowWeaponStats
 ### Known Limitations
 - No multiplayer support
 - Limited animation system
-- Basic AI behavior
 - No save system
 
 ---
 
-*Last Updated: 2025-07-23*  
+## Enemy AI System
+
+### Overview
+The enemy AI system uses a state machine architecture implemented in pure C++ for optimal performance. Each enemy can transition between different behavioral states based on player proximity and combat conditions.
+
+### Core Components
+
+#### 1. AI State Machine (`UAIStateMachine`)
+- Component-based system that manages state transitions
+- Tick-based state updates
+- Blueprint-compatible for easy configuration
+
+#### 2. Base AI State (`UAIState`)
+- Abstract base class for all AI states
+- Implements Enter/Update/Exit pattern
+- Handles state transitions through `TransitionToState()`
+
+#### 3. Enemy AI Controller (`AEnemyAIController`)
+- Manages pathfinding and movement
+- Integrates with Unreal's navigation system
+- Handles movement requests from AI states
+
+### Implemented States
+
+#### Idle State (`UAIState_Idle`)
+- Default state when no threats detected
+- Scans for players within sight range (configurable)
+- Uses line-of-sight checks to detect valid targets
+- Transitions to Chase when player detected
+
+#### Chase State (`UAIState_Chase`)
+- Actively pursues detected player
+- Uses navigation mesh for pathfinding
+- Updates path periodically for moving targets
+- Transitions to Attack when in range, or Idle if target lost
+
+#### Attack State (`UAIState_Attack`)
+- Executes attacks when player is within attack range
+- Manages attack cooldowns through CombatComponent
+- Faces target during attacks
+- Returns to Chase if target moves out of range
+
+### Setup Instructions
+
+#### 1. Create AI State Blueprints
+```
+1. Right-click in Content Browser → Blueprint Class
+2. Create blueprints for each state:
+   - Parent: UAIState_Idle → Name: BP_AIState_Idle
+   - Parent: UAIState_Chase → Name: BP_AIState_Chase
+   - Parent: UAIState_Attack → Name: BP_AIState_Attack
+```
+
+#### 2. Configure State Transitions
+```
+1. Open BP_AIState_Idle:
+   - Set Chase State Class = BP_AIState_Chase
+
+2. Open BP_AIState_Chase:
+   - Set Attack State Class = BP_AIState_Attack
+   - Set Idle State Class = BP_AIState_Idle
+
+3. Open BP_AIState_Attack:
+   - Set Chase State Class = BP_AIState_Chase
+   - Set Idle State Class = BP_AIState_Idle
+```
+
+#### 3. Configure Enemy Blueprints
+```
+1. Open each enemy blueprint (BP_StandardEnemy, etc.)
+2. In Details panel:
+   - Initial State Class = BP_AIState_Idle
+   - Movement Speed = 300 (or as desired)
+3. Compile and save
+```
+
+#### 4. Place Navigation Mesh
+```
+1. In level editor: Place Actors → Volumes → Nav Mesh Bounds Volume
+2. Scale to cover all walkable areas
+3. Press 'P' to visualize navigation mesh (should show green overlay)
+```
+
+### Animation Setup
+
+The AI system provides helper functions for animation blueprints:
+
+#### Available Functions
+- `GetCurrentSpeed()` - Returns current movement velocity magnitude
+- `IsMoving()` - Returns true if enemy is moving
+- `GetFloatingMovementComponent()` - Direct access to movement component
+
+#### Animation Blueprint Setup
+```
+1. Open enemy Animation Blueprint
+2. In Event Graph:
+   - Get Pawn Owner → Cast to EnemyBase
+   - Call GetCurrentSpeed → Save to Speed variable
+3. In AnimGraph:
+   - Create State Machine or Blend Space
+   - Use Speed to blend between Idle/Walk/Run animations
+```
+
+### Enemy Stats Configuration
+
+Enemy stats control AI behavior parameters:
+- **SightRange**: Detection distance for players (default 1500)
+- **AttackRange**: Distance to initiate attacks (default 300)
+- **MovementSpeed**: Chase movement speed (default 300)
+
+Configure these in the character stats data assets.
+
+### Future AI Enhancements
+- Patrol waypoint system
+- Group coordination
+- Advanced attack patterns
+- Environmental awareness
+- Fleeing/retreat behavior
+
+---
+
+*Last Updated: 2025-07-24*  
 *Version: 1.0*

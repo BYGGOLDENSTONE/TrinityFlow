@@ -9,6 +9,10 @@
 #include "../../TrinityFlowCharacter.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "GameFramework/FloatingPawnMovement.h"
+#include "AI/AIStateMachine.h"
+#include "AI/EnemyAIController.h"
+#include "AI/AIState.h"
 #include "DrawDebugHelpers.h"
 #include "Engine/World.h"
 #include "Kismet/GameplayStatics.h"
@@ -16,6 +20,7 @@
 AEnemyBase::AEnemyBase()
 {
     PrimaryActorTick.bCanEverTick = true;
+    PrimaryActorTick.bStartWithTickEnabled = true;
 
     // Create components
     CapsuleComponent = CreateDefaultSubobject<UCapsuleComponent>(TEXT("CapsuleComponent"));
@@ -28,6 +33,7 @@ AEnemyBase::AEnemyBase()
     CapsuleComponent->SetCollisionResponseToAllChannels(ECR_Block);
     CapsuleComponent->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
     CapsuleComponent->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
+    CapsuleComponent->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);  // Allow pawns to overlap
 
     MeshComponent = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("MeshComponent"));
     MeshComponent->SetupAttachment(CapsuleComponent);
@@ -42,6 +48,23 @@ AEnemyBase::AEnemyBase()
     TagComponent = CreateDefaultSubobject<UTagComponent>(TEXT("TagComponent"));
     StateComponent = CreateDefaultSubobject<UStateComponent>(TEXT("StateComponent"));
     CombatComponent = CreateDefaultSubobject<UCombatComponent>(TEXT("CombatComponent"));
+    
+    // AI Components
+    AIStateMachine = CreateDefaultSubobject<UAIStateMachine>(TEXT("AIStateMachine"));
+    
+    // Movement Component
+    MovementComponent = CreateDefaultSubobject<UFloatingPawnMovement>(TEXT("MovementComponent"));
+    MovementComponent->UpdatedComponent = CapsuleComponent;
+    MovementComponent->MaxSpeed = MovementSpeed;
+    MovementComponent->bConstrainToPlane = false;  // Don't constrain to plane, let navmesh handle it
+    MovementComponent->Acceleration = 800.0f;
+    MovementComponent->Deceleration = 800.0f;
+    
+    // Set AI Controller class
+    AIControllerClass = AEnemyAIController::StaticClass();
+    AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
+    
+    // Default initial state will be set in blueprints
 }
 
 void AEnemyBase::BeginPlay()
@@ -60,7 +83,46 @@ void AEnemyBase::BeginPlay()
     // Attack speed and range are set in SetupEnemy() from stats
 
     // Find player
-    PlayerTarget = Cast<ATrinityFlowCharacter>(UGameplayStatics::GetPlayerPawn(GetWorld(), 0));
+    PlayerTarget = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
+    
+    // Ensure movement component is properly configured
+    if (MovementComponent)
+    {
+        // Make sure UpdatedComponent is still set
+        if (!MovementComponent->UpdatedComponent)
+        {
+            MovementComponent->SetUpdatedComponent(CapsuleComponent);
+        }
+        UE_LOG(LogTemp, Warning, TEXT("Enemy %s: Movement component configured with speed %.0f, UpdatedComponent=%s"), 
+            *GetName(), 
+            MovementComponent->MaxSpeed,
+            MovementComponent->UpdatedComponent ? TEXT("Valid") : TEXT("NULL"));
+            
+        // Ensure movement component is active
+        MovementComponent->SetComponentTickEnabled(true);
+        MovementComponent->SetActive(true);
+    }
+    
+    // Initialize AI State Machine
+    if (AIStateMachine)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Enemy %s: Initializing AI State Machine"), *GetName());
+        
+        // Use the specified initial state or default to Idle
+        if (InitialStateClass)
+        {
+            UE_LOG(LogTemp, Warning, TEXT("Enemy %s: Using InitialStateClass: %s"), *GetName(), *InitialStateClass->GetName());
+            AIStateMachine->Initialize(InitialStateClass);
+        }
+        else
+        {
+            UE_LOG(LogTemp, Error, TEXT("Enemy %s: No InitialStateClass set!"), *GetName());
+        }
+    }
+    else
+    {
+        UE_LOG(LogTemp, Error, TEXT("Enemy %s: No AIStateMachine component found!"), *GetName());
+    }
 
     // Register with combat state manager
     if (UCombatStateManager* CombatManager = GetWorld()->GetSubsystem<UCombatStateManager>())
@@ -76,7 +138,10 @@ void AEnemyBase::BeginPlay()
         if (PlayerTarget)
         {
             UE_LOG(LogTemp, Warning, TEXT("Enemy %s attempting to register with player"), *GetName());
-            PlayerTarget->RegisterEnemyDamageEvents(this);
+            if (ATrinityFlowCharacter* TrinityCharacter = Cast<ATrinityFlowCharacter>(PlayerTarget))
+            {
+                TrinityCharacter->RegisterEnemyDamageEvents(this);
+            }
         }
         else
         {
@@ -89,17 +154,15 @@ void AEnemyBase::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
 
-    UpdateCombatState();
-
-    if (StateComponent && StateComponent->HasState(ECharacterState::Combat) && PlayerTarget)
+    // AI State Machine handles combat logic now
+    // Remove old hardcoded behavior
+    
+    // Debug velocity for animation
+    if (MovementComponent && !MovementComponent->Velocity.IsZero())
     {
-        // Face player
-        FVector DirectionToPlayer = (PlayerTarget->GetActorLocation() - GetActorLocation()).GetSafeNormal();
-        DirectionToPlayer.Z = 0.0f;
-        SetActorRotation(DirectionToPlayer.Rotation());
-
-        // Try to attack
-        AttackPlayer();
+        float Speed = MovementComponent->Velocity.Size();
+        UE_LOG(LogTemp, Warning, TEXT("Enemy %s: Velocity = %s, Speed = %.0f"), 
+            *GetName(), *MovementComponent->Velocity.ToString(), Speed);
     }
 }
 
@@ -144,6 +207,14 @@ void AEnemyBase::SetupEnemy()
         {
             CombatComponent->SetAttackSpeed(1.0f / StatsToUse->AttackSpeed); // Convert to delay
             CombatComponent->SetAttackRange(AttackRange);
+        }
+        
+        // Update movement speed if specified in stats
+        if (MovementComponent && StatsToUse->MovementSpeed > 0.0f)
+        {
+            MovementSpeed = StatsToUse->MovementSpeed;
+            MovementComponent->MaxSpeed = MovementSpeed;
+            UE_LOG(LogTemp, Warning, TEXT("Enemy %s movement speed set to %.0f"), *GetName(), MovementSpeed);
         }
         
         // Apply tags
@@ -216,43 +287,14 @@ bool AEnemyBase::CanSeePlayer()
 
 void AEnemyBase::UpdateCombatState()
 {
-    if (!StateComponent || !PlayerTarget)
-    {
-        return;
-    }
-
-    bool bCanSeePlayerNow = CanSeePlayer();
-
-    if (bCanSeePlayerNow && !bHasSeenPlayer)
-    {
-        // Enter combat
-        bHasSeenPlayer = true;
-        StateComponent->RemoveState(ECharacterState::NonCombat);
-        StateComponent->AddState(ECharacterState::Combat);
-
-        // Notify combat state manager
-        if (UCombatStateManager* CombatManager = GetWorld()->GetSubsystem<UCombatStateManager>())
-        {
-            CombatManager->OnEnemySeesPlayer(this);
-        }
-
-        // Visual feedback
-        DrawDebugSphere(GetWorld(), GetActorLocation() + FVector(0, 0, 100), 50.0f, 12, FColor::Red, false, 2.0f);
-    }
+    // This is now handled by the AI State Machine
+    // Keeping empty for compatibility
 }
 
 void AEnemyBase::AttackPlayer()
 {
-    if (!CombatComponent || !PlayerTarget || !CombatComponent->CanAttack())
-    {
-        return;
-    }
-
-    float DistanceToPlayer = FVector::Dist(GetActorLocation(), PlayerTarget->GetActorLocation());
-    if (DistanceToPlayer <= AttackRange)
-    {
-        CombatComponent->StartAttack(PlayerTarget, AttackRange, EDamageType::Physical, bIsAreaDamage);
-    }
+    // This is now handled by the AI Attack State
+    // Keeping empty for compatibility
 }
 
 void AEnemyBase::OnHealthChanged(float NewHealth)
@@ -266,4 +308,28 @@ void AEnemyBase::OnHealthChanged(float NewHealth)
 void AEnemyBase::OnDeathEvent()
 {
     OnDeath();
+}
+
+void AEnemyBase::FaceTarget(AActor* Target)
+{
+    if (!Target)
+    {
+        return;
+    }
+    
+    FVector DirectionToTarget = (Target->GetActorLocation() - GetActorLocation()).GetSafeNormal();
+    DirectionToTarget.Z = 0.0f;
+    
+    FRotator NewRotation = DirectionToTarget.Rotation();
+    SetActorRotation(NewRotation);
+}
+
+float AEnemyBase::GetCurrentSpeed() const
+{
+    return MovementComponent ? MovementComponent->Velocity.Size() : 0.0f;
+}
+
+bool AEnemyBase::IsMoving() const
+{
+    return MovementComponent && !MovementComponent->Velocity.IsNearlyZero();
 }

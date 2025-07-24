@@ -50,6 +50,9 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AI", meta = (ClampMin = "100", ClampMax = "5000"))
     float SightRange = 1500.0f;
 
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AI", meta = (ClampMin = "50", ClampMax = "1000"))
+    float MovementSpeed = 300.0f;
+
     // Tags
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tags", meta = (Bitmask, BitmaskEnum = "/Script/TrinityFlow.ECharacterTag"))
     int32 CharacterTags = 0;
