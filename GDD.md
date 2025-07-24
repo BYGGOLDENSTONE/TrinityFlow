@@ -511,16 +511,25 @@ The enemy AI system uses a state machine architecture implemented in pure C++ fo
 - Component-based system that manages state transitions
 - Tick-based state updates
 - Blueprint-compatible for easy configuration
+- Automatically finds and uses the enemy's AI controller
 
 #### 2. Base AI State (`UAIState`)
 - Abstract base class for all AI states
 - Implements Enter/Update/Exit pattern
 - Handles state transitions through `TransitionToState()`
+- Caches enemy, controller, and state machine references
 
 #### 3. Enemy AI Controller (`AEnemyAIController`)
-- Manages pathfinding and movement
+- Extends AAIController with CrowdFollowingComponent
+- Manages pathfinding and movement requests
 - Integrates with Unreal's navigation system
-- Handles movement requests from AI states
+- Automatically possesses enemy pawns
+
+#### 4. Enemy Base Class Updates
+- Changed from APawn to ACharacter for better movement
+- Uses built-in CharacterMovementComponent
+- Automatic integration with navigation mesh
+- Better physics and collision handling
 
 ### Implemented States
 
@@ -532,9 +541,11 @@ The enemy AI system uses a state machine architecture implemented in pure C++ fo
 
 #### Chase State (`UAIState_Chase`)
 - Actively pursues detected player
-- Uses navigation mesh for pathfinding
-- Updates path periodically for moving targets
+- Uses navigation mesh for pathfinding with MoveToActor
+- Updates path periodically (configurable interval)
+- Checks for line-of-sight to maintain pursuit
 - Transitions to Attack when in range, or Idle if target lost
+- Handles stuck detection with velocity monitoring
 
 #### Attack State (`UAIState_Attack`)
 - Executes attacks when player is within attack range
@@ -581,26 +592,6 @@ The enemy AI system uses a state machine architecture implemented in pure C++ fo
 1. In level editor: Place Actors → Volumes → Nav Mesh Bounds Volume
 2. Scale to cover all walkable areas
 3. Press 'P' to visualize navigation mesh (should show green overlay)
-```
-
-### Animation Setup
-
-The AI system provides helper functions for animation blueprints:
-
-#### Available Functions
-- `GetCurrentSpeed()` - Returns current movement velocity magnitude
-- `IsMoving()` - Returns true if enemy is moving
-- `GetFloatingMovementComponent()` - Direct access to movement component
-
-#### Animation Blueprint Setup
-```
-1. Open enemy Animation Blueprint
-2. In Event Graph:
-   - Get Pawn Owner → Cast to EnemyBase
-   - Call GetCurrentSpeed → Save to Speed variable
-3. In AnimGraph:
-   - Create State Machine or Blend Space
-   - Use Speed to blend between Idle/Walk/Run animations
 ```
 
 ### Enemy Stats Configuration

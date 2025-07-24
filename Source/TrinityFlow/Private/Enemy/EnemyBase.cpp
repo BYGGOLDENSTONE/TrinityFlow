@@ -9,7 +9,7 @@
 #include "../../TrinityFlowCharacter.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
-#include "GameFramework/FloatingPawnMovement.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "AI/AIStateMachine.h"
 #include "AI/EnemyAIController.h"
 #include "AI/AIState.h"
@@ -22,28 +22,26 @@ AEnemyBase::AEnemyBase()
     PrimaryActorTick.bCanEverTick = true;
     PrimaryActorTick.bStartWithTickEnabled = true;
 
-    // Create components
-    CapsuleComponent = CreateDefaultSubobject<UCapsuleComponent>(TEXT("CapsuleComponent"));
-    SetRootComponent(CapsuleComponent);
-    CapsuleComponent->SetCapsuleHalfHeight(88.0f);
-    CapsuleComponent->SetCapsuleRadius(34.0f);
+    // Configure inherited capsule component
+    GetCapsuleComponent()->SetCapsuleHalfHeight(88.0f);
+    GetCapsuleComponent()->SetCapsuleRadius(34.0f);
     
     // Set collision properties for proper detection
-    CapsuleComponent->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-    CapsuleComponent->SetCollisionResponseToAllChannels(ECR_Block);
-    CapsuleComponent->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
-    CapsuleComponent->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
-    CapsuleComponent->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);  // Allow pawns to overlap
+    GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+    GetCapsuleComponent()->SetCollisionResponseToAllChannels(ECR_Block);
+    GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
+    GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
+    GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);  // Allow pawns to overlap
 
-    MeshComponent = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("MeshComponent"));
-    MeshComponent->SetupAttachment(CapsuleComponent);
-    MeshComponent->SetRelativeLocation(FVector(0.0f, 0.0f, -88.0f));
+    // Configure inherited mesh component
+    GetMesh()->SetRelativeLocation(FVector(0.0f, 0.0f, -88.0f));
     
     // Ensure mesh also blocks visibility for line traces
-    MeshComponent->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-    MeshComponent->SetCollisionResponseToAllChannels(ECR_Ignore);
-    MeshComponent->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
+    GetMesh()->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+    GetMesh()->SetCollisionResponseToAllChannels(ECR_Ignore);
+    GetMesh()->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
 
+    // Create custom components
     HealthComponent = CreateDefaultSubobject<UHealthComponent>(TEXT("HealthComponent"));
     TagComponent = CreateDefaultSubobject<UTagComponent>(TEXT("TagComponent"));
     StateComponent = CreateDefaultSubobject<UStateComponent>(TEXT("StateComponent"));
@@ -52,17 +50,13 @@ AEnemyBase::AEnemyBase()
     // AI Components
     AIStateMachine = CreateDefaultSubobject<UAIStateMachine>(TEXT("AIStateMachine"));
     
-    // Movement Component
-    MovementComponent = CreateDefaultSubobject<UFloatingPawnMovement>(TEXT("MovementComponent"));
-    MovementComponent->UpdatedComponent = CapsuleComponent;
-    MovementComponent->MaxSpeed = MovementSpeed;
-    MovementComponent->bConstrainToPlane = false;  // Don't constrain to plane, let navmesh handle it
-    MovementComponent->Acceleration = 800.0f;
-    MovementComponent->Deceleration = 800.0f;
-    
     // Set AI Controller class
     AIControllerClass = AEnemyAIController::StaticClass();
     AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
+    
+    // Configure character movement
+    GetCharacterMovement()->bOrientRotationToMovement = true;
+    GetCharacterMovement()->RotationRate = FRotator(0.0f, 540.0f, 0.0f);
     
     // Default initial state will be set in blueprints
 }
@@ -85,43 +79,18 @@ void AEnemyBase::BeginPlay()
     // Find player
     PlayerTarget = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
     
-    // Ensure movement component is properly configured
-    if (MovementComponent)
-    {
-        // Make sure UpdatedComponent is still set
-        if (!MovementComponent->UpdatedComponent)
-        {
-            MovementComponent->SetUpdatedComponent(CapsuleComponent);
-        }
-        UE_LOG(LogTemp, Warning, TEXT("Enemy %s: Movement component configured with speed %.0f, UpdatedComponent=%s"), 
-            *GetName(), 
-            MovementComponent->MaxSpeed,
-            MovementComponent->UpdatedComponent ? TEXT("Valid") : TEXT("NULL"));
-            
-        // Ensure movement component is active
-        MovementComponent->SetComponentTickEnabled(true);
-        MovementComponent->SetActive(true);
-    }
-    
     // Initialize AI State Machine
     if (AIStateMachine)
     {
-        UE_LOG(LogTemp, Warning, TEXT("Enemy %s: Initializing AI State Machine"), *GetName());
-        
         // Use the specified initial state or default to Idle
         if (InitialStateClass)
         {
-            UE_LOG(LogTemp, Warning, TEXT("Enemy %s: Using InitialStateClass: %s"), *GetName(), *InitialStateClass->GetName());
             AIStateMachine->Initialize(InitialStateClass);
         }
         else
         {
             UE_LOG(LogTemp, Error, TEXT("Enemy %s: No InitialStateClass set!"), *GetName());
         }
-    }
-    else
-    {
-        UE_LOG(LogTemp, Error, TEXT("Enemy %s: No AIStateMachine component found!"), *GetName());
     }
 
     // Register with combat state manager
@@ -156,14 +125,6 @@ void AEnemyBase::Tick(float DeltaTime)
 
     // AI State Machine handles combat logic now
     // Remove old hardcoded behavior
-    
-    // Debug velocity for animation
-    if (MovementComponent && !MovementComponent->Velocity.IsZero())
-    {
-        float Speed = MovementComponent->Velocity.Size();
-        UE_LOG(LogTemp, Warning, TEXT("Enemy %s: Velocity = %s, Speed = %.0f"), 
-            *GetName(), *MovementComponent->Velocity.ToString(), Speed);
-    }
 }
 
 void AEnemyBase::SetupEnemy()
@@ -210,11 +171,10 @@ void AEnemyBase::SetupEnemy()
         }
         
         // Update movement speed if specified in stats
-        if (MovementComponent && StatsToUse->MovementSpeed > 0.0f)
+        if (StatsToUse->MovementSpeed > 0.0f)
         {
             MovementSpeed = StatsToUse->MovementSpeed;
-            MovementComponent->MaxSpeed = MovementSpeed;
-            UE_LOG(LogTemp, Warning, TEXT("Enemy %s movement speed set to %.0f"), *GetName(), MovementSpeed);
+            GetCharacterMovement()->MaxWalkSpeed = MovementSpeed;
         }
         
         // Apply tags
@@ -322,14 +282,4 @@ void AEnemyBase::FaceTarget(AActor* Target)
     
     FRotator NewRotation = DirectionToTarget.Rotation();
     SetActorRotation(NewRotation);
-}
-
-float AEnemyBase::GetCurrentSpeed() const
-{
-    return MovementComponent ? MovementComponent->Velocity.Size() : 0.0f;
-}
-
-bool AEnemyBase::IsMoving() const
-{
-    return MovementComponent && !MovementComponent->Velocity.IsNearlyZero();
 }

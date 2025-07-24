@@ -45,7 +45,6 @@ void UAIStateMachine::Initialize(TSubclassOf<UAIState> InitialStateClass)
 		return;
 	}
 
-	UE_LOG(LogTemp, Warning, TEXT("AIStateMachine: Initializing with state %s"), *InitialStateClass->GetName());
 	CreateAndEnterState(InitialStateClass);
 }
 
@@ -62,9 +61,6 @@ void UAIStateMachine::ChangeState(TSubclassOf<UAIState> NewStateClass)
 		return;
 	}
 
-	UE_LOG(LogTemp, Warning, TEXT("AIStateMachine: Changing state from %s to %s"), 
-		CurrentStateClass ? *CurrentStateClass->GetName() : TEXT("None"), 
-		*NewStateClass->GetName());
 
 	if (CurrentState)
 	{

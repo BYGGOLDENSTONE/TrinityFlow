@@ -1,12 +1,12 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/Pawn.h"
+#include "GameFramework/Character.h"
 #include "Core/TrinityFlowTypes.h"
 #include "EnemyBase.generated.h"
 
 UCLASS(Abstract)
-class TRINITYFLOW_API AEnemyBase : public APawn
+class TRINITYFLOW_API AEnemyBase : public ACharacter
 {
     GENERATED_BODY()
 
@@ -30,16 +30,7 @@ protected:
     class UCombatComponent* CombatComponent;
 
     UPROPERTY(EditDefaultsOnly, Category = "Components")
-    class UCapsuleComponent* CapsuleComponent;
-
-    UPROPERTY(EditDefaultsOnly, Category = "Components")
-    class USkeletalMeshComponent* MeshComponent;
-
-    UPROPERTY(EditDefaultsOnly, Category = "Components")
     class UAIStateMachine* AIStateMachine;
-
-    UPROPERTY(EditDefaultsOnly, Category = "Components")
-    class UFloatingPawnMovement* MovementComponent;
 
     // Stats Configuration
     UPROPERTY(EditDefaultsOnly, Category = "Stats")
@@ -105,20 +96,10 @@ public:
 
     UFUNCTION(BlueprintPure, Category = "AI")
     UAIStateMachine* GetAIStateMachine() const { return AIStateMachine; }
-    
-    UFUNCTION(BlueprintPure, Category = "Components")
-    class UFloatingPawnMovement* GetFloatingMovementComponent() const { return MovementComponent; }
 
     UPROPERTY(EditDefaultsOnly, Category = "AI")
     TSubclassOf<class UAIState> InitialStateClass;
 
     UPROPERTY(EditDefaultsOnly, Category = "AI")
     float MovementSpeed = 300.0f;
-
-    // Animation helpers
-    UFUNCTION(BlueprintPure, Category = "Animation")
-    float GetCurrentSpeed() const;
-    
-    UFUNCTION(BlueprintPure, Category = "Animation")
-    bool IsMoving() const;
 };

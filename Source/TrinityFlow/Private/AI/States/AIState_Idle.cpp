@@ -46,10 +46,8 @@ void UAIState_Idle::Update(float DeltaTime)
 		
 		if (CheckForPlayer())
 		{
-			UE_LOG(LogTemp, Warning, TEXT("Idle State: Player detected! Transitioning to chase"));
 			if (ChaseStateClass)
 			{
-				UE_LOG(LogTemp, Warning, TEXT("Idle State: ChaseStateClass is %s"), *ChaseStateClass->GetName());
 				TransitionToState(ChaseStateClass);
 			}
 			else
@@ -115,8 +113,6 @@ bool UAIState_Idle::CheckForPlayer()
 
 		if (!bHit || HitResult.GetActor() == PlayerPawn)
 		{
-			UE_LOG(LogTemp, Warning, TEXT("CheckForPlayer: %s sees player! Distance: %.0f, SightRange: %.0f"), 
-				*CachedEnemy->GetName(), DistanceToPlayer, SightRange);
 			CachedEnemy->SetTargetPlayer(PlayerPawn);
 			CachedEnemy->bHasSeenPlayer = true;  // Set the flag
 			return true;

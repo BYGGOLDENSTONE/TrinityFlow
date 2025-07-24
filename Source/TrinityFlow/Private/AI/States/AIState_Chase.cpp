@@ -25,10 +25,6 @@ void UAIState_Chase::Enter(AEnemyBase* Enemy, AEnemyAIController* AIController)
 	
 	TimeSinceLastPathUpdate = 0.0f;
 	
-	APawn* Target = CachedEnemy ? CachedEnemy->GetTargetPlayer() : nullptr;
-	UE_LOG(LogTemp, Warning, TEXT("Chase State Enter: Enemy=%s, Target=%s"), 
-		CachedEnemy ? *CachedEnemy->GetName() : TEXT("None"),
-		Target ? *Target->GetName() : TEXT("None"));
 	
 	if (CachedEnemy && CachedEnemy->GetStateComponent())
 	{
@@ -61,17 +57,33 @@ void UAIState_Chase::Update(float DeltaTime)
 	APawn* Target = CachedEnemy->GetTargetPlayer();
 	if (!Target)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Chase State: Lost target! Returning to idle"));
 		if (IdleStateClass)
 		{
 			TransitionToState(IdleStateClass);
 		}
 		return;
 	}
+	
+	// Check movement component status
+	if (UPawnMovementComponent* MoveComp = CachedEnemy->GetMovementComponent())
+	{
+		FVector Velocity = MoveComp->Velocity;
+		if (Velocity.SizeSquared() < 1.0f)
+		{
+			static int32 StuckCounter = 0;
+			StuckCounter++;
+			if (StuckCounter % 60 == 0) // Log every second if stuck
+			{
+				UE_LOG(LogTemp, Warning, TEXT("Enemy %s appears stuck! Velocity: %s, MaxSpeed: %.1f"), 
+					*CachedEnemy->GetName(), 
+					*Velocity.ToString(),
+					MoveComp->GetMaxSpeed());
+			}
+		}
+	}
 
 	if (HasLostTarget())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Chase State: HasLostTarget returned true"));
 		CachedEnemy->SetTargetPlayer(nullptr);
 		if (IdleStateClass)
 		{
@@ -146,40 +158,73 @@ void UAIState_Chase::UpdatePath()
 	// Check if location is on nav mesh
 	FNavLocation NavLocation;
 	bool bOnNavMesh = NavSys->ProjectPointToNavigation(CachedEnemy->GetActorLocation(), NavLocation, FVector(500, 500, 500));
-	UE_LOG(LogTemp, Warning, TEXT("UpdatePath: Enemy on NavMesh = %s"), bOnNavMesh ? TEXT("Yes") : TEXT("No"));
-
-	UE_LOG(LogTemp, Warning, TEXT("UpdatePath: %s moving to %s"), 
-		*CachedEnemy->GetName(), *Target->GetName());
-
-	FAIMoveRequest MoveRequest;
-	MoveRequest.SetGoalActor(Target);
-	MoveRequest.SetAcceptanceRadius(AcceptanceRadius);
-	MoveRequest.SetUsePathfinding(true);
-
-	FPathFollowingRequestResult Result = CachedAIController->MoveTo(MoveRequest);
 	
-	FString ResultString;
-	switch (Result.Code)
+	if (!bOnNavMesh)
 	{
-		case EPathFollowingRequestResult::Failed: ResultString = TEXT("Failed"); break;
-		case EPathFollowingRequestResult::AlreadyAtGoal: ResultString = TEXT("AlreadyAtGoal"); break;
-		case EPathFollowingRequestResult::RequestSuccessful: ResultString = TEXT("RequestSuccessful"); break;
-		default: ResultString = TEXT("Unknown");
-	}
-	
-	UE_LOG(LogTemp, Warning, TEXT("UpdatePath: MoveTo result = %s (%d)"), *ResultString, (int32)Result.Code);
-
-	// Check movement component
-	if (CachedEnemy->GetMovementComponent())
-	{
-		UE_LOG(LogTemp, Warning, TEXT("UpdatePath: Movement component exists, MaxSpeed = %.0f"), 
-			CachedEnemy->GetMovementComponent()->GetMaxSpeed());
-			
+		UE_LOG(LogTemp, Error, TEXT("UpdatePath: Enemy %s is NOT on NavMesh! Location: %s"), 
+			*CachedEnemy->GetName(), *CachedEnemy->GetActorLocation().ToString());
 	}
 	else
 	{
-		UE_LOG(LogTemp, Error, TEXT("UpdatePath: No movement component!"));
+		UE_LOG(LogTemp, Warning, TEXT("UpdatePath: Enemy %s IS on NavMesh. Enemy Loc: %s, Nav Loc: %s"), 
+			*CachedEnemy->GetName(), 
+			*CachedEnemy->GetActorLocation().ToString(),
+			*NavLocation.Location.ToString());
 	}
+	
+	// Check if target is on nav mesh
+	FNavLocation TargetNavLocation;
+	bool bTargetOnNavMesh = NavSys->ProjectPointToNavigation(Target->GetActorLocation(), TargetNavLocation, FVector(500, 500, 500));
+	
+	if (!bTargetOnNavMesh)
+	{
+		UE_LOG(LogTemp, Error, TEXT("UpdatePath: Target is NOT on NavMesh! Location: %s"), 
+			*Target->GetActorLocation().ToString());
+	}
+
+	// Try SimpleMoveToActor first - it's more forgiving
+	EPathFollowingRequestResult::Type SimpleResult = CachedAIController->MoveToActor(Target, AcceptanceRadius);
+	
+	// Log result
+	switch (SimpleResult)
+	{
+		case EPathFollowingRequestResult::Failed:
+			{
+				UE_LOG(LogTemp, Error, TEXT("UpdatePath: MoveTo FAILED for %s"), *CachedEnemy->GetName());
+				
+				// Additional debugging for failure
+				if (!CachedAIController->GetPathFollowingComponent())
+				{
+					UE_LOG(LogTemp, Error, TEXT("  - Reason: NO PathFollowingComponent!"));
+				}
+				else if (!CachedEnemy->GetMovementComponent())
+				{
+					UE_LOG(LogTemp, Error, TEXT("  - Reason: NO MovementComponent!"));
+				}
+				else
+				{
+					UE_LOG(LogTemp, Error, TEXT("  - PathFollowing: %s, Movement: %s"), 
+						*CachedAIController->GetPathFollowingComponent()->GetClass()->GetName(),
+						*CachedEnemy->GetMovementComponent()->GetClass()->GetName());
+					
+					// Check if movement component is properly linked
+					if (CachedAIController->GetPawn() != CachedEnemy)
+					{
+						UE_LOG(LogTemp, Error, TEXT("  - Controller pawn mismatch! Controller's pawn: %s"), 
+							CachedAIController->GetPawn() ? *CachedAIController->GetPawn()->GetName() : TEXT("NULL"));
+					}
+					
+				}
+			}
+			break;
+		case EPathFollowingRequestResult::AlreadyAtGoal:
+			UE_LOG(LogTemp, Warning, TEXT("UpdatePath: %s is already at goal"), *CachedEnemy->GetName());
+			break;
+		case EPathFollowingRequestResult::RequestSuccessful:
+			UE_LOG(LogTemp, Log, TEXT("UpdatePath: MoveTo successful for %s"), *CachedEnemy->GetName());
+			break;
+	}
+	
 
 	#if WITH_EDITOR
 	if (CachedEnemy->GetWorld()->WorldType == EWorldType::Editor)
@@ -188,7 +233,7 @@ void UAIState_Chase::UpdatePath()
 			AcceptanceRadius, 12, FColor::Yellow, false, PathUpdateInterval);
 		
 		// Draw path if it exists
-		if (Result.Code == EPathFollowingRequestResult::RequestSuccessful)
+		if (SimpleResult == EPathFollowingRequestResult::RequestSuccessful)
 		{
 			DrawDebugLine(CachedEnemy->GetWorld(), CachedEnemy->GetActorLocation(), 
 				Target->GetActorLocation(), FColor::Green, false, PathUpdateInterval, 0, 5.0f);

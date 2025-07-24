@@ -20,25 +20,22 @@ All notable changes to TrinityFlow are documented in this file.
 - **Enemy AI Controller**
   - `AEnemyAIController` handles movement requests and pathfinding
   - Automatic navigation mesh integration
-  - Support for FloatingPawnMovement
-  
-- **Movement System**
-  - Added FloatingPawnMovement component to all enemies
-  - Configurable movement speed in enemy stats
-  - Proper collision settings for navigation
-  
-- **Animation Support**
-  - Added `GetCurrentSpeed()` and `IsMoving()` blueprint functions
-  - Velocity-based animation system ready for implementation
-  - Movement component properly updates velocity for animation blueprints
+  - Uses CrowdFollowingComponent for better group navigation
 
 ### Changed
-- **Enemy Base Class Updates**
-  - Integrated AI state machine component
-  - Added movement component and AI controller support
-  - Removed hardcoded combat behavior in favor of state machine
-  - Made `bHasSeenPlayer` accessible for state management
+- **Enemy Base Class Refactor**
+  - Changed `AEnemyBase` from `APawn` to `ACharacter` for better movement support
+  - Now uses built-in CharacterMovementComponent instead of custom movement
+  - Leverages Unreal's character features for improved AI navigation
+  - Better integration with animation systems
   
+- **Movement System Improvements**
+  - Removed custom FloatingPawnMovement in favor of CharacterMovement
+  - Movement speed now properly updates from stats data
+  - Better pathfinding with proper ground detection and obstacle avoidance
+  
+
+### Updated
 - **Build Configuration**
   - Added AIModule and NavigationSystem dependencies
   - Proper module configuration for AI features

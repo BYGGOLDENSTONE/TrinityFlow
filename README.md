@@ -35,11 +35,11 @@ TrinityFlow is a fast-paced action game where players wield two distinct weapons
 - **Shielded Tank Robot**: Mechanical, immune to soul damage
 
 ### Enemy AI System
-- **State Machine Architecture**: Pure C++ implementation for performance
-- **Intelligent Behavior**: Enemies detect, chase, and attack players
-- **Navigation Integration**: Full pathfinding with obstacle avoidance
-- **Configurable Parameters**: Sight range, attack range, movement speed
-- **Animation Support**: Velocity-based system ready for animation blueprints
+- **State Machine Architecture**: Pure C++ implementation with modular state design
+- **Intelligent Behavior**: Line-of-sight detection, chase with pathfinding, melee attacks
+- **Character-Based Movement**: Enemies use ACharacter for proper navigation and physics
+- **Navigation Integration**: Full NavMesh pathfinding with CharacterMovementComponent
+- **Configurable Parameters**: Sight range, attack range, movement speed via data assets
 
 ### Tag System
 - **Shielded**: Blocks frontal physical damage
@@ -77,7 +77,8 @@ TrinityFlow/
 │       ├── Core/           # Core systems (health, combat, stats)
 │       ├── Combat/         # Weapon base classes
 │       ├── Player/         # Player character and weapons
-│       ├── Enemy/          # Enemy types
+│       ├── Enemy/          # Enemy types (now Character-based)
+│       ├── AI/             # AI state machine and controllers
 │       ├── HUD/            # UI and HUD
 │       └── Data/           # Stats and configuration
 ├── Content/
