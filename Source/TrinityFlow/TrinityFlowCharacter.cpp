@@ -277,6 +277,7 @@ void ATrinityFlowCharacter::Attack()
 {
 	if (CurrentWeapon)
 	{
+		// Perform weapon attack
 		AActor* Target = GetTargetInSight();
 		CurrentWeapon->BasicAttack(Target);
 	}

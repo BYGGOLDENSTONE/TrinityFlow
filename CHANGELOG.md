@@ -2,7 +2,29 @@
 
 All notable changes to TrinityFlow are documented in this file.
 
-## [Latest] - 2025-07-24
+## [Latest] - 2025-07-26
+
+### Removed
+- **C++ Animation System**
+  - Removed PlayerAnimationComponent class entirely
+  - Removed all animation montage references from C++ code
+  - Removed AnimationCore module dependency
+  - Simplified attack system to focus on gameplay logic
+  
+### Changed
+- **Character Attack System**
+  - Attack() method now directly calls weapon attack without animation coupling
+  - Cleaner separation between gameplay and visual representation
+  - Preparation for new animation system implementation
+
+### Technical Details
+- Deleted files:
+  - `Source/TrinityFlow/Public/Player/PlayerAnimationComponent.h`
+  - `Source/TrinityFlow/Private/Player/PlayerAnimationComponent.cpp`
+- Updated TrinityFlowCharacter to remove animation component references
+- Updated build configuration to remove AnimationCore dependency
+
+## [Previous] - 2025-07-24
 
 ### Added
 - **Enemy AI State Machine System**
@@ -27,7 +49,7 @@ All notable changes to TrinityFlow are documented in this file.
   - Changed `AEnemyBase` from `APawn` to `ACharacter` for better movement support
   - Now uses built-in CharacterMovementComponent instead of custom movement
   - Leverages Unreal's character features for improved AI navigation
-  - Better integration with animation systems
+  - Better integration with movement systems
   
 - **Movement System Improvements**
   - Removed custom FloatingPawnMovement in favor of CharacterMovement

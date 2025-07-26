@@ -495,7 +495,7 @@ UTrinityFlowWeaponStats
 
 ### Known Limitations
 - No multiplayer support
-- Limited animation system
+- Animation system pending implementation
 - No save system
 
 ---
