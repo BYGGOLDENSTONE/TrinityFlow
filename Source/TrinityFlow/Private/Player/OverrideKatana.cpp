@@ -45,6 +45,9 @@ void AOverrideKatana::BeginPlay()
                 // Cache katana stats pointer
                 KatanaStats = &WeaponStats->KatanaStats;
                 
+                // Apply basic attack timing
+                BasicAttackDamageDelay = KatanaStats->BasicAttackDamageDelay;
+                
                 UE_LOG(LogTemp, Log, TEXT("Override Katana loaded stats: Range=%.0f, Speed=%.1f"), 
                     BasicAttackRange, BasicAttackSpeed);
             }
@@ -250,4 +253,36 @@ bool AOverrideKatana::ProcessDodge(float& OutDamageMultiplier)
     DodgeWindowTimer = 0.0f;
     
     return true;
+}
+
+void AOverrideKatana::BasicAttack(AActor* Target)
+{
+    // Determine which attack to use based on current state
+    if (bIsLeftAttack)
+    {
+        BasicAttackLeft(Target);
+    }
+    else
+    {
+        BasicAttackRight(Target);
+    }
+    
+    // Toggle for next attack
+    bIsLeftAttack = !bIsLeftAttack;
+}
+
+void AOverrideKatana::BasicAttackLeft(AActor* Target)
+{
+    // Call parent implementation
+    Super::BasicAttack(Target);
+    
+    // Animation will be handled by character class
+}
+
+void AOverrideKatana::BasicAttackRight(AActor* Target)
+{
+    // Call parent implementation
+    Super::BasicAttack(Target);
+    
+    // Animation will be handled by character class
 }

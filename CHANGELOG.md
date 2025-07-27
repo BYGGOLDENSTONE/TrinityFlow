@@ -2,7 +2,40 @@
 
 All notable changes to TrinityFlow are documented in this file.
 
-## [Latest] - 2025-07-26
+## [Latest] - 2025-07-27
+
+### Added
+- **Dual Attack System for Katana**
+  - Left Mouse Button (LMB) and Right Mouse Button (RMB) input support
+  - Separate attack methods for left and right attacks
+  - Animation montage support for different attack animations
+  - Attack alternation system in OverrideKatana
+
+- **Attack Delay System**
+  - 0.6-second delay between attack input and damage application
+  - Allows for proper wind-up animations
+  - Visual debug indicators (orange during wind-up, red on hit)
+  - Separate timers for concurrent attacks
+
+### Changed
+- **Player Character Input**
+  - Added RightAttackAction input binding
+  - Added RightAttack() function to handle RMB attacks
+  - Moved animation montage properties from weapon to character
+  - Animation handling now centralized in character blueprint
+
+- **Weapon Base System**
+  - Added ExecuteBasicAttack for delayed damage application
+  - Added attack timer handles and pending target tracking
+  - Updated attack flow to support animation timing
+
+### Technical Details
+- Animation montages are now managed in TrinityFlowCharacter blueprint
+- OverrideKatana tracks attack type with bIsLeftAttack flag
+- Both LMB and RMB currently call BasicAttack but are ready for differentiation
+- Attack delay configurable through BasicAttackDamageDelay property
+
+## [Previous] - 2025-07-26
 
 ### Removed
 - **C++ Animation System**

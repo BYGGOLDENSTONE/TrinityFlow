@@ -13,6 +13,10 @@ struct FKatanaAbilityStats
 {
     GENERATED_BODY()
 
+    // Basic Attack Timing
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Basic Attack", meta = (ClampMin = "0", ClampMax = "2"))
+    float BasicAttackDamageDelay = 0.6f; // Delay before damage is dealt (in seconds)
+
     // Echoes of Data (Q)
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Echoes of Data")
     float EchoesRange = 4000.0f;

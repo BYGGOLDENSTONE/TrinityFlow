@@ -117,6 +117,7 @@ void ATrinityFlowCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInp
 
 		// Combat
 		EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Started, this, &ATrinityFlowCharacter::Attack);
+		EnhancedInputComponent->BindAction(RightAttackAction, ETriggerEvent::Started, this, &ATrinityFlowCharacter::RightAttack);
 		EnhancedInputComponent->BindAction(AbilityQAction, ETriggerEvent::Started, this, &ATrinityFlowCharacter::AbilityQ);
 		EnhancedInputComponent->BindAction(AbilityEAction, ETriggerEvent::Started, this, &ATrinityFlowCharacter::AbilityE);
 		EnhancedInputComponent->BindAction(SwitchWeaponAction, ETriggerEvent::Started, this, &ATrinityFlowCharacter::SwitchWeapon);
@@ -280,6 +281,28 @@ void ATrinityFlowCharacter::Attack()
 		// Perform weapon attack
 		AActor* Target = GetTargetInSight();
 		CurrentWeapon->BasicAttack(Target);
+		
+		// Play left attack animation
+		if (LeftAttackMontage && GetMesh() && GetMesh()->GetAnimInstance())
+		{
+			GetMesh()->GetAnimInstance()->Montage_Play(LeftAttackMontage);
+		}
+	}
+}
+
+void ATrinityFlowCharacter::RightAttack()
+{
+	if (CurrentWeapon)
+	{
+		// For now, same as left attack - will be different in future
+		AActor* Target = GetTargetInSight();
+		CurrentWeapon->BasicAttack(Target);
+		
+		// Play right attack animation
+		if (RightAttackMontage && GetMesh() && GetMesh()->GetAnimInstance())
+		{
+			GetMesh()->GetAnimInstance()->Montage_Play(RightAttackMontage);
+		}
 	}
 }
 

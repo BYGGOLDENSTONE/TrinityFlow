@@ -13,6 +13,10 @@ struct FAnchorAbilityStats
 {
     GENERATED_BODY()
 
+    // Basic Attack Timing
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Basic Attack", meta = (ClampMin = "0", ClampMax = "2"))
+    float BasicAttackDamageDelay = 0.7f; // Delay before damage is dealt (in seconds) - slightly longer for heavy weapon
+
     // Smash (Basic Attack)
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Smash")
     float SmashKnockbackForce = 500.0f;

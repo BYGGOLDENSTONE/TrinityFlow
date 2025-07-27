@@ -49,6 +49,9 @@ void ADivineAnchor::BeginPlay()
                 // Cache anchor stats pointer
                 AnchorStats = &WeaponStats->AnchorStats;
                 
+                // Apply basic attack timing
+                BasicAttackDamageDelay = AnchorStats->BasicAttackDamageDelay;
+                
                 UE_LOG(LogTemp, Log, TEXT("Divine Anchor loaded stats: Range=%.0f, Speed=%.1f"), 
                     BasicAttackRange, BasicAttackSpeed);
             }

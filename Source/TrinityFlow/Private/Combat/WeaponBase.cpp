@@ -3,6 +3,8 @@
 #include "Components/SceneComponent.h"
 #include "GameFramework/Pawn.h"
 #include "DrawDebugHelpers.h"
+#include "Engine/World.h"
+#include "TimerManager.h"
 
 AWeaponBase::AWeaponBase()
 {
@@ -52,6 +54,57 @@ void AWeaponBase::BasicAttack(AActor* Target)
         return;
     }
 
+    // Store the target for delayed damage
+    PendingAttackTarget = Target;
+
+    // Clear any existing attack timer
+    if (GetWorld()->GetTimerManager().IsTimerActive(AttackTimerHandle))
+    {
+        GetWorld()->GetTimerManager().ClearTimer(AttackTimerHandle);
+    }
+
+    // Set timer to execute the actual attack after delay
+    FTimerDelegate TimerDelegate;
+    TimerDelegate.BindUFunction(this, FName("ExecuteBasicAttack"), Target);
+    GetWorld()->GetTimerManager().SetTimer(
+        AttackTimerHandle,
+        TimerDelegate,
+        BasicAttackDamageDelay,
+        false
+    );
+
+    // Draw debug for attack wind-up
+    DrawDebugLine(GetWorld(), GetActorLocation(), Target->GetActorLocation(), FColor::Orange, false, BasicAttackDamageDelay, 0, 2.0f);
+}
+
+void AWeaponBase::ExecuteBasicAttack(AActor* Target)
+{
+    // Use the pending target if no target is provided
+    if (!Target && PendingAttackTarget)
+    {
+        Target = PendingAttackTarget;
+    }
+
+    if (!Target || !OwnerHealthComponent)
+    {
+        PendingAttackTarget = nullptr;
+        return;
+    }
+
+    // Check if target is still valid and in range
+    if (!IsValid(Target))
+    {
+        PendingAttackTarget = nullptr;
+        return;
+    }
+
+    float Distance = FVector::Dist(GetActorLocation(), Target->GetActorLocation());
+    if (Distance > BasicAttackRange * 1.5f) // Give a bit more leeway for moving targets
+    {
+        PendingAttackTarget = nullptr;
+        return;
+    }
+
     if (UHealthComponent* TargetHealth = Target->FindComponentByClass<UHealthComponent>())
     {
         FDamageInfo DamageInfo;
@@ -59,7 +112,7 @@ void AWeaponBase::BasicAttack(AActor* Target)
         DamageInfo.Type = BasicDamageType;
         DamageInfo.Instigator = OwnerPawn;
         
-        UE_LOG(LogTemp, Warning, TEXT("WeaponBase BasicAttack: Instigator=%s, Target=%s, Damage=%.1f"), 
+        UE_LOG(LogTemp, Warning, TEXT("WeaponBase ExecuteBasicAttack: Instigator=%s, Target=%s, Damage=%.1f"), 
             OwnerPawn ? *OwnerPawn->GetName() : TEXT("NULL"),
             Target ? *Target->GetName() : TEXT("NULL"),
             DamageInfo.Amount);
@@ -67,9 +120,12 @@ void AWeaponBase::BasicAttack(AActor* Target)
         FVector DamageDirection = (Target->GetActorLocation() - GetActorLocation()).GetSafeNormal();
         TargetHealth->TakeDamage(DamageInfo, DamageDirection);
 
-        // Draw debug for basic attack
-        DrawDebugLine(GetWorld(), GetActorLocation(), Target->GetActorLocation(), FColor::Yellow, false, 0.5f, 0, 2.0f);
+        // Draw debug for successful hit
+        DrawDebugLine(GetWorld(), GetActorLocation(), Target->GetActorLocation(), FColor::Red, false, 0.5f, 0, 3.0f);
     }
+
+    // Clear pending target
+    PendingAttackTarget = nullptr;
 }
 
 void AWeaponBase::StartCooldown(float& Timer, float Cooldown)

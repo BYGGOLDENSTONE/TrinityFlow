@@ -19,6 +19,9 @@ public:
     virtual void BasicAttack(AActor* Target);
 
     UFUNCTION()
+    virtual void ExecuteBasicAttack(AActor* Target);
+
+    UFUNCTION()
     virtual void AbilityQ(AActor* Target) { }
 
     UFUNCTION()
@@ -71,6 +74,16 @@ protected:
 
     UPROPERTY()
     class UHealthComponent* OwnerHealthComponent;
+
+    // Attack delay system
+    UPROPERTY()
+    float BasicAttackDamageDelay = 0.6f; // Time in seconds to wait before dealing damage
+
+    UPROPERTY()
+    FTimerHandle AttackTimerHandle;
+
+    UPROPERTY()
+    AActor* PendingAttackTarget;
 
     void StartCooldown(float& Timer, float Cooldown);
 };

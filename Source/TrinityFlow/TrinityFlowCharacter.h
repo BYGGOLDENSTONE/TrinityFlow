@@ -45,9 +45,13 @@ class ATrinityFlowCharacter : public ACharacter
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* LookAction;
 
-	/** Attack Input Action */
+	/** Attack Input Action (Left Mouse Button) */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* AttackAction;
+
+	/** Right Attack Input Action (Right Mouse Button) */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* RightAttackAction;
 
 	/** Ability Q Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
@@ -111,6 +115,7 @@ protected:
 
 	/** Called for attack input */
 	void Attack();
+	void RightAttack();
 
 	/** Called for ability inputs */
 	void AbilityQ();
@@ -146,6 +151,13 @@ protected:
 	class ADivineAnchor* DivineAnchor;
 
 	bool bIsKatanaActive = true;
+
+	// Combat Animation Montages (to be set in Blueprint)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat|Animation")
+	class UAnimMontage* LeftAttackMontage;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat|Animation")
+	class UAnimMontage* RightAttackMontage;
 	
 	// Defensive ability state
 	bool bDefensiveAbilityActive = false;
