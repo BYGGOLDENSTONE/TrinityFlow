@@ -34,7 +34,9 @@ void ADivineAnchor::BeginPlay()
     {
         if (UTrinityFlowStatsSubsystem* StatsSubsystem = GameInstance->GetSubsystem<UTrinityFlowStatsSubsystem>())
         {
-            WeaponStats = StatsSubsystem->GetAnchorStats("DivineAnchor");
+            // TODO: Divine Anchor is being phased out in favor of dual katana system
+            // WeaponStats = StatsSubsystem->GetAnchorStats("DivineAnchor");
+            WeaponStats = nullptr;
             if (WeaponStats)
             {
                 // Apply base weapon stats

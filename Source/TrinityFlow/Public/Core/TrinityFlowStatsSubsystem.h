@@ -8,7 +8,7 @@
 class UTrinityFlowCharacterStats;
 class UTrinityFlowWeaponStatsBase;
 class UTrinityFlowKatanaStats;
-class UTrinityFlowAnchorStats;
+class UTrinityFlowPhysicalKatanaStats;
 
 /**
  * Row structure for character stats data table
@@ -64,10 +64,10 @@ public:
 
     // Type-safe weapon stats getters
     UFUNCTION(BlueprintCallable, Category = "Stats")
-    UTrinityFlowKatanaStats* GetKatanaStats(FName WeaponID) const;
+    UTrinityFlowKatanaStats* GetLeftKatanaStats() const;
 
     UFUNCTION(BlueprintCallable, Category = "Stats")
-    UTrinityFlowAnchorStats* GetAnchorStats(FName WeaponID) const;
+    UTrinityFlowPhysicalKatanaStats* GetPhysicalKatanaStats() const;
 
     // Reload stats (useful for runtime tweaking)
     UFUNCTION(BlueprintCallable, CallInEditor, Category = "Stats|Debug")
@@ -86,10 +86,10 @@ protected:
     TSoftObjectPtr<UTrinityFlowCharacterStats> DefaultPlayerStats;
 
     UPROPERTY(EditDefaultsOnly, Category = "Configuration")
-    TSoftObjectPtr<UTrinityFlowKatanaStats> DefaultKatanaStats;
+    TSoftObjectPtr<UTrinityFlowKatanaStats> DefaultLeftKatanaStats;
 
     UPROPERTY(EditDefaultsOnly, Category = "Configuration")
-    TSoftObjectPtr<UTrinityFlowAnchorStats> DefaultAnchorStats;
+    TSoftObjectPtr<UTrinityFlowPhysicalKatanaStats> DefaultRightKatanaStats;
 
 private:
     // Cached stats for performance

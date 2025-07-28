@@ -13,10 +13,10 @@ AOverrideKatana::AOverrideKatana()
     // Default values - will be overridden by stats subsystem
     BasicAttackRange = 300.0f;
     BasicAttackSpeed = 1.0f;
-    BasicDamageType = EDamageType::Physical;
+    BasicDamageType = EDamageType::Soul;  // Soul damage for left katana
     
-    AbilityQCooldown = 5.0f; // Echoes of Data
-    AbilityECooldown = 6.0f; // Code Break
+    AbilityQCooldown = 6.0f; // Code Break (was E)
+    AbilityECooldown = 5.0f; // Will be used for Tab ability (Echoes)
     
     // Don't create AbilityComponent here - we'll get it from the owner
 }
@@ -30,7 +30,7 @@ void AOverrideKatana::BeginPlay()
     {
         if (UTrinityFlowStatsSubsystem* StatsSubsystem = GameInstance->GetSubsystem<UTrinityFlowStatsSubsystem>())
         {
-            WeaponStats = StatsSubsystem->GetKatanaStats("OverrideKatana");
+            WeaponStats = StatsSubsystem->GetLeftKatanaStats();
             if (WeaponStats)
             {
                 // Apply base weapon stats
@@ -79,39 +79,8 @@ void AOverrideKatana::BeginPlay()
 
 void AOverrideKatana::AbilityQ(AActor* Target)
 {
-    // Echoes of Data
+    // Code Break - Enhanced slash with soul damage (moved from E)
     if (!IsAbilityQReady() || !Target)
-    {
-        return;
-    }
-
-    float Distance = FVector::Dist(GetActorLocation(), Target->GetActorLocation());
-    float EchoesRange = KatanaStats ? KatanaStats->EchoesRange : 4000.0f;
-    if (Distance > EchoesRange)
-    {
-        return;
-    }
-
-    if (AbilityComponent)
-    {
-        AbilityComponent->SetEchoesTarget(Target);
-        UE_LOG(LogTemp, Warning, TEXT("Echoes of Data: Marked enemy %s"), *Target->GetName());
-    }
-    else
-    {
-        UE_LOG(LogTemp, Error, TEXT("Echoes of Data: No AbilityComponent found!"));
-    }
-
-    StartCooldown(AbilityQCooldownTimer, AbilityQCooldown);
-
-    // Visual feedback
-    DrawDebugLine(GetWorld(), GetActorLocation(), Target->GetActorLocation(), FColor::Purple, false, 1.0f, 0, 3.0f);
-}
-
-void AOverrideKatana::AbilityE(AActor* Target)
-{
-    // Code Break - Enhanced slash with soul damage
-    if (!IsAbilityEReady() || !Target)
     {
         return;
     }
@@ -137,7 +106,38 @@ void AOverrideKatana::AbilityE(AActor* Target)
         DrawDebugLine(GetWorld(), GetActorLocation(), Target->GetActorLocation(), FColor::Cyan, false, 0.5f, 0, 5.0f);
     }
 
-    StartCooldown(AbilityECooldownTimer, AbilityECooldown);
+    StartCooldown(AbilityQCooldownTimer, AbilityQCooldown);
+}
+
+void AOverrideKatana::AbilityTab(AActor* Target)
+{
+    // Echoes of Data (moved from Q)
+    if (!IsAbilityEReady() || !Target)  // Using E cooldown for Tab ability
+    {
+        return;
+    }
+
+    float Distance = FVector::Dist(GetActorLocation(), Target->GetActorLocation());
+    float EchoesRange = KatanaStats ? KatanaStats->EchoesRange : 4000.0f;
+    if (Distance > EchoesRange)
+    {
+        return;
+    }
+
+    if (AbilityComponent)
+    {
+        AbilityComponent->SetEchoesTarget(Target);
+        UE_LOG(LogTemp, Warning, TEXT("Echoes of Data: Marked enemy %s"), *Target->GetName());
+    }
+    else
+    {
+        UE_LOG(LogTemp, Error, TEXT("Echoes of Data: No AbilityComponent found!"));
+    }
+
+    StartCooldown(AbilityECooldownTimer, AbilityECooldown);  // Using E cooldown for Tab
+
+    // Visual feedback
+    DrawDebugLine(GetWorld(), GetActorLocation(), Target->GetActorLocation(), FColor::Purple, false, 1.0f, 0, 3.0f);
 }
 
 void AOverrideKatana::DefensiveAbility()
@@ -257,31 +257,7 @@ bool AOverrideKatana::ProcessDodge(float& OutDamageMultiplier)
 
 void AOverrideKatana::BasicAttack(AActor* Target)
 {
-    // Determine which attack to use based on current state
-    if (bIsLeftAttack)
-    {
-        BasicAttackLeft(Target);
-    }
-    else
-    {
-        BasicAttackRight(Target);
-    }
-    
-    // Toggle for next attack
-    bIsLeftAttack = !bIsLeftAttack;
-}
-
-void AOverrideKatana::BasicAttackLeft(AActor* Target)
-{
-    // Call parent implementation
-    Super::BasicAttack(Target);
-    
-    // Animation will be handled by character class
-}
-
-void AOverrideKatana::BasicAttackRight(AActor* Target)
-{
-    // Call parent implementation
+    // Soul damage basic attack for left katana
     Super::BasicAttack(Target);
     
     // Animation will be handled by character class

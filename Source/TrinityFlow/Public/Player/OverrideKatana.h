@@ -17,19 +17,13 @@ public:
 
     virtual void BeginPlay() override;
 
-    // Override basic attack to handle both left and right attacks
+    // Override basic attack for soul damage
     virtual void BasicAttack(AActor* Target) override;
-    
-    // Katana-specific attack methods
-    UFUNCTION()
-    void BasicAttackLeft(AActor* Target);
-    
-    UFUNCTION()
-    void BasicAttackRight(AActor* Target);
 
-    virtual void AbilityQ(AActor* Target) override; // Echoes of Data
-    virtual void AbilityE(AActor* Target) override; // Code Break
-    virtual void DefensiveAbility() override; // Scripted Dodge
+    // Remapped abilities for dual-wielding
+    virtual void AbilityQ(AActor* Target) override; // Code Break (was E)
+    virtual void AbilityTab(AActor* Target); // Echoes of Data (was Q)
+    virtual void DefensiveAbility() override; // Scripted Dodge (now on Shift)
 
     UFUNCTION()
     void OnPerfectDodge();
@@ -56,21 +50,6 @@ protected:
     UPROPERTY()
     AActor* DodgeAttacker = nullptr;
 
-    // Attack tracking for left/right attacks
-    UPROPERTY()
-    bool bIsLeftAttack = true;
-    
-    UPROPERTY()
-    FTimerHandle LeftAttackTimerHandle;
-    
-    UPROPERTY()
-    FTimerHandle RightAttackTimerHandle;
-    
-    UPROPERTY()
-    AActor* PendingLeftTarget;
-    
-    UPROPERTY()
-    AActor* PendingRightTarget;
 
 public:
     virtual void Tick(float DeltaTime) override;

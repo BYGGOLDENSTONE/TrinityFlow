@@ -17,7 +17,7 @@
 #include "Data/TrinityFlowCharacterStats.h"
 #include "Combat/AbilityComponent.h"
 #include "Player/OverrideKatana.h"
-#include "Player/DivineAnchor.h"
+#include "Player/PhysicalKatana.h"
 #include "Enemy/EnemyBase.h"
 #include "DrawDebugHelpers.h"
 #include "Engine/World.h"
@@ -105,22 +105,26 @@ void ATrinityFlowCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInp
 	// Set up action bindings
 	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent)) {
 		
-		// Jumping / Defensive Ability (contextual)
-		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &ATrinityFlowCharacter::DefensiveAbility);
-		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
-
 		// Moving
 		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ATrinityFlowCharacter::Move);
 
 		// Looking
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ATrinityFlowCharacter::Look);
 
-		// Combat
-		EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Started, this, &ATrinityFlowCharacter::Attack);
-		EnhancedInputComponent->BindAction(RightAttackAction, ETriggerEvent::Started, this, &ATrinityFlowCharacter::RightAttack);
-		EnhancedInputComponent->BindAction(AbilityQAction, ETriggerEvent::Started, this, &ATrinityFlowCharacter::AbilityQ);
-		EnhancedInputComponent->BindAction(AbilityEAction, ETriggerEvent::Started, this, &ATrinityFlowCharacter::AbilityE);
-		EnhancedInputComponent->BindAction(SwitchWeaponAction, ETriggerEvent::Started, this, &ATrinityFlowCharacter::SwitchWeapon);
+		// Combat - Dual Katana attacks
+		EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Started, this, &ATrinityFlowCharacter::LeftKatanaAttack);     // LMB - Soul damage
+		EnhancedInputComponent->BindAction(RightAttackAction, ETriggerEvent::Started, this, &ATrinityFlowCharacter::RightKatanaAttack); // RMB - Physical damage
+
+		// Abilities
+		EnhancedInputComponent->BindAction(AbilityQAction, ETriggerEvent::Started, this, &ATrinityFlowCharacter::AbilityQ);       // Q - Code Break
+		EnhancedInputComponent->BindAction(AbilityEAction, ETriggerEvent::Started, this, &ATrinityFlowCharacter::AbilityE);       // E - Right katana ability / Interaction
+		EnhancedInputComponent->BindAction(AbilityTabAction, ETriggerEvent::Started, this, &ATrinityFlowCharacter::AbilityTab);   // Tab - Echoes of Data
+		EnhancedInputComponent->BindAction(AbilityRAction, ETriggerEvent::Started, this, &ATrinityFlowCharacter::AbilityR);       // R - Right katana ability 2
+
+		// Defensive abilities
+		EnhancedInputComponent->BindAction(LeftDefensiveAction, ETriggerEvent::Started, this, &ATrinityFlowCharacter::LeftDefensiveAbility);   // Shift - Scripted Dodge
+		EnhancedInputComponent->BindAction(RightDefensiveAction, ETriggerEvent::Started, this, &ATrinityFlowCharacter::RightDefensiveAbility); // Space - Order / Jump
+		EnhancedInputComponent->BindAction(RightDefensiveAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
 	}
 	else
 	{
@@ -214,25 +218,24 @@ void ATrinityFlowCharacter::BeginPlay()
 		}
 	}
 
-	// Spawn weapons
+	// Spawn dual katanas
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.Owner = this;
 	SpawnParams.Instigator = this;
 
-	OverrideKatana = GetWorld()->SpawnActor<AOverrideKatana>(AOverrideKatana::StaticClass(), GetActorLocation(), GetActorRotation(), SpawnParams);
-	if (OverrideKatana)
+	// Spawn left katana (soul damage)
+	LeftKatana = GetWorld()->SpawnActor<AOverrideKatana>(AOverrideKatana::StaticClass(), GetActorLocation(), GetActorRotation(), SpawnParams);
+	if (LeftKatana)
 	{
-		OverrideKatana->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, TEXT("hand_r"));
+		LeftKatana->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, TEXT("hand_l"));
 	}
 
-	DivineAnchor = GetWorld()->SpawnActor<ADivineAnchor>(ADivineAnchor::StaticClass(), GetActorLocation(), GetActorRotation(), SpawnParams);
-	if (DivineAnchor)
+	// Spawn right katana (physical damage)
+	RightKatana = GetWorld()->SpawnActor<APhysicalKatana>(APhysicalKatana::StaticClass(), GetActorLocation(), GetActorRotation(), SpawnParams);
+	if (RightKatana)
 	{
-		DivineAnchor->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, TEXT("hand_r"));
-		DivineAnchor->SetActorHiddenInGame(true);
+		RightKatana->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, TEXT("hand_r"));
 	}
-
-	CurrentWeapon = OverrideKatana;
 	
 	// Register player's own health component for echo system (in case of self-damage or special abilities)
 	if (HealthComponent)
@@ -244,6 +247,12 @@ void ATrinityFlowCharacter::BeginPlay()
 void ATrinityFlowCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+	// Check if attack has completed
+	if (bIsAttacking && GetWorld()->GetTimeSeconds() >= AttackEndTime)
+	{
+		OnAttackComplete();
+	}
 
 	// Update defensive window
 	if (bDefensiveAbilityActive)
@@ -274,111 +283,135 @@ void ATrinityFlowCharacter::Tick(float DeltaTime)
 	}
 }
 
-void ATrinityFlowCharacter::Attack()
+void ATrinityFlowCharacter::LeftKatanaAttack()
 {
-	if (CurrentWeapon)
+	// Check if any attack is in progress
+	if (bIsAttacking)
 	{
-		// Perform weapon attack
-		AActor* Target = GetTargetInSight();
-		CurrentWeapon->BasicAttack(Target);
+		UE_LOG(LogTemplateCharacter, Log, TEXT("Cannot attack: Another attack in progress"));
+		return;
+	}
+	
+	if (LeftKatana)
+	{
+		bIsAttacking = true;
+		CurrentAttackingWeapon = LeftKatana;
+		AttackEndTime = GetWorld()->GetTimeSeconds() + LeftKatana->GetAttackDuration();
 		
-		// Play left attack animation
-		if (LeftAttackMontage && GetMesh() && GetMesh()->GetAnimInstance())
+		AActor* Target = GetTargetInSight();
+		LeftKatana->BasicAttack(Target);
+		
+		// Play left katana animation
+		if (LeftKatanaAttackMontage && GetMesh() && GetMesh()->GetAnimInstance())
 		{
-			GetMesh()->GetAnimInstance()->Montage_Play(LeftAttackMontage);
+			GetMesh()->GetAnimInstance()->Montage_Play(LeftKatanaAttackMontage);
 		}
 	}
 }
 
-void ATrinityFlowCharacter::RightAttack()
+void ATrinityFlowCharacter::RightKatanaAttack()
 {
-	if (CurrentWeapon)
+	// Check if any attack is in progress
+	if (bIsAttacking)
 	{
-		// For now, same as left attack - will be different in future
-		AActor* Target = GetTargetInSight();
-		CurrentWeapon->BasicAttack(Target);
+		UE_LOG(LogTemplateCharacter, Log, TEXT("Cannot attack: Another attack in progress"));
+		return;
+	}
+	
+	if (RightKatana)
+	{
+		bIsAttacking = true;
+		CurrentAttackingWeapon = RightKatana;
+		AttackEndTime = GetWorld()->GetTimeSeconds() + RightKatana->GetAttackDuration();
 		
-		// Play right attack animation
-		if (RightAttackMontage && GetMesh() && GetMesh()->GetAnimInstance())
+		AActor* Target = GetTargetInSight();
+		RightKatana->BasicAttack(Target);
+		
+		// Play right katana animation
+		if (RightKatanaAttackMontage && GetMesh() && GetMesh()->GetAnimInstance())
 		{
-			GetMesh()->GetAnimInstance()->Montage_Play(RightAttackMontage);
+			GetMesh()->GetAnimInstance()->Montage_Play(RightKatanaAttackMontage);
 		}
 	}
+}
+
+void ATrinityFlowCharacter::OnAttackComplete()
+{
+	bIsAttacking = false;
+	CurrentAttackingWeapon = nullptr;
+	AttackEndTime = 0.0f;
+	UE_LOG(LogTemplateCharacter, VeryVerbose, TEXT("Attack completed, ready for next attack"));
 }
 
 void ATrinityFlowCharacter::AbilityQ()
 {
-	if (CurrentWeapon)
+	// Left katana ability 1 - Code Break
+	if (LeftKatana)
 	{
 		AActor* Target = GetTargetInSight();
-		CurrentWeapon->AbilityQ(Target);
+		LeftKatana->AbilityQ(Target);
 	}
 }
 
 void ATrinityFlowCharacter::AbilityE()
 {
-	if (CurrentWeapon)
+	// Check if we're in non-combat state
+	if (StateComponent && !StateComponent->HasState(ECharacterState::Combat))
+	{
+		// In non-combat state - play interaction animation
+		if (InteractionMontage && GetMesh() && GetMesh()->GetAnimInstance())
+		{
+			GetMesh()->GetAnimInstance()->Montage_Play(InteractionMontage);
+			UE_LOG(LogTemplateCharacter, Log, TEXT("Playing interaction montage"));
+		}
+	}
+	else if (RightKatana)
+	{
+		// In combat state - use right katana ability
+		AActor* Target = GetTargetInSight();
+		RightKatana->AbilityE(Target);
+	}
+}
+
+void ATrinityFlowCharacter::AbilityTab()
+{
+	// Left katana ability 2 - Echoes of Data
+	if (LeftKatana)
 	{
 		AActor* Target = GetTargetInSight();
-		CurrentWeapon->AbilityE(Target);
+		LeftKatana->AbilityTab(Target);
 	}
 }
 
-void ATrinityFlowCharacter::SwitchWeapon()
+void ATrinityFlowCharacter::AbilityR()
 {
-	if (bIsKatanaActive)
+	// Right katana ability 2
+	if (RightKatana)
 	{
-		// Switch to Divine Anchor
-		if (OverrideKatana) OverrideKatana->SetActorHiddenInGame(true);
-		if (DivineAnchor) DivineAnchor->SetActorHiddenInGame(false);
-		CurrentWeapon = DivineAnchor;
-		bIsKatanaActive = false;
-	}
-	else
-	{
-		// Switch to Override Katana
-		if (DivineAnchor) DivineAnchor->SetActorHiddenInGame(true);
-		if (OverrideKatana) OverrideKatana->SetActorHiddenInGame(false);
-		CurrentWeapon = OverrideKatana;
-		bIsKatanaActive = true;
+		AActor* Target = GetTargetInSight();
+		RightKatana->AbilityR(Target);
 	}
 }
 
-void ATrinityFlowCharacter::DefensiveAbility()
+void ATrinityFlowCharacter::LeftDefensiveAbility()
 {
+	// Shift key - Scripted Dodge for left katana
 	if (StateComponent && StateComponent->HasState(ECharacterState::Combat))
 	{
-		// In combat - use defensive ability
-		if (bDefensiveAbilityActive && CurrentWeapon)
+		if (bDefensiveAbilityActive && LeftKatana)
 		{
-			// Check timing window
+			// Let the katana handle its defensive ability
+			LeftKatana->StartDodgeWindow(PendingDamage, PendingAttacker);
+			
+			// Process the dodge
 			float DamageMultiplier = 1.0f;
-			
-			if (DefensiveWindowTimer <= 0.75f)
+			if (LeftKatana->ProcessDodge(DamageMultiplier))
 			{
-				// Moderate window - half damage
-				DamageMultiplier = 0.5f;
-				DrawDebugSphere(GetWorld(), GetActorLocation(), 80.0f, 12, FColor::Orange, false, 0.5f);
-			}
-			else if (DefensiveWindowTimer <= 1.5f)
-			{
-				// Perfect window - no damage
-				DamageMultiplier = 0.0f;
-				DrawDebugSphere(GetWorld(), GetActorLocation(), 100.0f, 12, FColor::Green, false, 0.5f);
-				
-				// Reset Code Break cooldown if using katana
-				if (bIsKatanaActive && OverrideKatana)
-				{
-					OverrideKatana->OnPerfectDodge();
-				}
-				// Counter attack if using Divine Anchor
-				else if (!bIsKatanaActive && DivineAnchor && PendingAttacker)
-				{
-					DivineAnchor->PerformCounterAttack(PendingAttacker);
-				}
+				// Perfect dodge
+				LeftKatana->OnPerfectDodge();
 			}
 			
-			// Apply damage with multiplier
+			// Apply damage if any
 			if (HealthComponent && DamageMultiplier > 0.0f && PendingDamage > 0.0f)
 			{
 				FDamageInfo DamageInfo;
@@ -389,6 +422,39 @@ void ATrinityFlowCharacter::DefensiveAbility()
 				FVector DamageDirection = PendingAttacker ? (GetActorLocation() - PendingAttacker->GetActorLocation()).GetSafeNormal() : FVector::ForwardVector;
 				HealthComponent->TakeDamage(DamageInfo, DamageDirection);
 			}
+			
+			// Reset defensive state
+			bDefensiveAbilityActive = false;
+			DefensiveWindowTimer = 0.0f;
+			PendingDamage = 0.0f;
+			PendingAttacker = nullptr;
+		}
+	}
+	else
+	{
+		// Not in combat - no action
+		UE_LOG(LogTemplateCharacter, Log, TEXT("Left defensive ability only works in combat"));
+	}
+}
+
+void ATrinityFlowCharacter::RightDefensiveAbility()
+{
+	// Space key - Order for right katana
+	if (StateComponent && StateComponent->HasState(ECharacterState::Combat))
+	{
+		if (bDefensiveAbilityActive && RightKatana)
+		{
+			// Let the katana handle its defensive ability
+			RightKatana->StartOrderWindow(PendingDamage, PendingAttacker);
+			
+			// Process the order
+			if (RightKatana->ProcessOrder())
+			{
+				// Perfect order executed
+				RightKatana->OnPerfectOrder();
+			}
+			
+			// Damage is handled inside ProcessOrder
 			
 			// Reset defensive state
 			bDefensiveAbilityActive = false;

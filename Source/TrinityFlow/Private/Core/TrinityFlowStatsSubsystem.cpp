@@ -3,7 +3,7 @@
 #include "Data/TrinityFlowCharacterStats.h"
 #include "Data/TrinityFlowWeaponStatsBase.h"
 #include "Data/TrinityFlowKatanaStats.h"
-#include "Data/TrinityFlowAnchorStats.h"
+#include "Data/TrinityFlowPhysicalKatanaStats.h"
 #include "Engine/DataTable.h"
 #include "Engine/Engine.h"
 
@@ -67,34 +67,62 @@ UTrinityFlowWeaponStatsBase* UTrinityFlowStatsSubsystem::GetWeaponStats(FName We
     }
     
     // Try defaults
-    if (WeaponID == "OverrideKatana" && DefaultKatanaStats.IsValid())
+    if (WeaponID == "OverrideKatana" && DefaultLeftKatanaStats.IsValid())
     {
-        return DefaultKatanaStats.Get();
+        return DefaultLeftKatanaStats.Get();
     }
-    else if (WeaponID == "DivineAnchor" && DefaultAnchorStats.IsValid())
+    else if (WeaponID == "PhysicalKatana" && DefaultRightKatanaStats.IsValid())
     {
-        return DefaultAnchorStats.Get();
+        return DefaultRightKatanaStats.Get();
     }
     
     UE_LOG(LogTemp, Warning, TEXT("Weapon stats not found for ID: %s"), *WeaponID.ToString());
     return nullptr;
 }
 
-UTrinityFlowKatanaStats* UTrinityFlowStatsSubsystem::GetKatanaStats(FName WeaponID) const
+UTrinityFlowKatanaStats* UTrinityFlowStatsSubsystem::GetLeftKatanaStats() const
 {
-    if (UTrinityFlowWeaponStatsBase* BaseStats = GetWeaponStats(WeaponID))
+    // Try to get from default first
+    if (DefaultLeftKatanaStats.IsValid())
+    {
+        return DefaultLeftKatanaStats.Get();
+    }
+    
+    // Try to load it
+    if (!DefaultLeftKatanaStats.IsNull())
+    {
+        return Cast<UTrinityFlowKatanaStats>(DefaultLeftKatanaStats.LoadSynchronous());
+    }
+    
+    // Fallback to searching loaded weapons
+    if (UTrinityFlowWeaponStatsBase* BaseStats = GetWeaponStats("OverrideKatana"))
     {
         return Cast<UTrinityFlowKatanaStats>(BaseStats);
     }
+    
     return nullptr;
 }
 
-UTrinityFlowAnchorStats* UTrinityFlowStatsSubsystem::GetAnchorStats(FName WeaponID) const
+UTrinityFlowPhysicalKatanaStats* UTrinityFlowStatsSubsystem::GetPhysicalKatanaStats() const
 {
-    if (UTrinityFlowWeaponStatsBase* BaseStats = GetWeaponStats(WeaponID))
+    // Try to get from default first
+    if (DefaultRightKatanaStats.IsValid())
     {
-        return Cast<UTrinityFlowAnchorStats>(BaseStats);
+        return DefaultRightKatanaStats.Get();
     }
+    
+    // Try to load it
+    if (!DefaultRightKatanaStats.IsNull())
+    {
+        return Cast<UTrinityFlowPhysicalKatanaStats>(DefaultRightKatanaStats.LoadSynchronous());
+    }
+    
+    // Fallback to searching loaded weapons
+    if (UTrinityFlowWeaponStatsBase* BaseStats = GetWeaponStats("PhysicalKatana"))
+    {
+        return Cast<UTrinityFlowPhysicalKatanaStats>(BaseStats);
+    }
+    
     return nullptr;
 }
 
@@ -146,30 +174,30 @@ void UTrinityFlowStatsSubsystem::LoadWeaponStats()
     UE_LOG(LogTemp, Log, TEXT("Loading weapon stats..."));
     
     // Load default weapon stats
-    if (DefaultKatanaStats.IsValid())
+    if (DefaultLeftKatanaStats.IsValid())
     {
-        if (UTrinityFlowKatanaStats* KatanaStats = DefaultKatanaStats.LoadSynchronous())
+        if (UTrinityFlowKatanaStats* KatanaStats = DefaultLeftKatanaStats.LoadSynchronous())
         {
             LoadedWeaponStats.Add("OverrideKatana", KatanaStats);
-            UE_LOG(LogTemp, Log, TEXT("Loaded default Katana stats"));
+            UE_LOG(LogTemp, Log, TEXT("Loaded default Left Katana stats"));
         }
     }
     else
     {
-        UE_LOG(LogTemp, Warning, TEXT("DefaultKatanaStats is not valid"));
+        UE_LOG(LogTemp, Warning, TEXT("DefaultLeftKatanaStats is not valid"));
     }
     
-    if (DefaultAnchorStats.IsValid())
+    if (DefaultRightKatanaStats.IsValid())
     {
-        if (UTrinityFlowAnchorStats* AnchorStats = DefaultAnchorStats.LoadSynchronous())
+        if (UTrinityFlowPhysicalKatanaStats* PhysicalKatanaStats = DefaultRightKatanaStats.LoadSynchronous())
         {
-            LoadedWeaponStats.Add("DivineAnchor", AnchorStats);
-            UE_LOG(LogTemp, Log, TEXT("Loaded default Anchor stats"));
+            LoadedWeaponStats.Add("PhysicalKatana", PhysicalKatanaStats);
+            UE_LOG(LogTemp, Log, TEXT("Loaded default Right Katana stats"));
         }
     }
     else
     {
-        UE_LOG(LogTemp, Warning, TEXT("DefaultAnchorStats is not valid"));
+        UE_LOG(LogTemp, Warning, TEXT("DefaultRightKatanaStats is not valid"));
     }
     
     // Load from data table if available
@@ -226,13 +254,13 @@ void UTrinityFlowStatsSubsystem::ConfigureFromGameInstance(UTrinityFlowGameInsta
         DefaultPlayerStats = GameInstance->DefaultPlayerStats;
     }
     
-    if (GameInstance->DefaultKatanaStats)
+    if (GameInstance->DefaultLeftKatanaStats)
     {
-        DefaultKatanaStats = GameInstance->DefaultKatanaStats;
+        DefaultLeftKatanaStats = GameInstance->DefaultLeftKatanaStats;
     }
     
-    if (GameInstance->DefaultAnchorStats)
+    if (GameInstance->DefaultRightKatanaStats)
     {
-        DefaultAnchorStats = GameInstance->DefaultAnchorStats;
+        DefaultRightKatanaStats = GameInstance->DefaultRightKatanaStats;
     }
 }

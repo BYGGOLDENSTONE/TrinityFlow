@@ -93,24 +93,34 @@ Dynamic conditions affecting gameplay:
 - **Tags**: HaveSoul, Armored
 
 ### Movement
-- **Combat**: No jumping, space = defensive ability
-- **Non-Combat**: Standard movement + jumping
-- **Weapon Switch**: Instant, no cooldown
+- **Combat**: No jumping, defensive abilities on Shift/Space
+- **Non-Combat**: Standard movement + jumping + interaction
+- **Attack Coordination**: Only one katana can attack at a time
 
 ---
 
 ## Weapons & Abilities
 
-### Override Katana
+### Dual-Wielding Katana System
+*Player wields two katanas simultaneously with coordinated attacks*
+
+### Left Katana (Override Katana)
 *Fast, precise weapon with soul damage focus*
 
-#### Basic Attack - Slash
-- **Damage**: Physical
+#### Basic Attack - Soul Slash (LMB)
+- **Damage**: Soul
 - **Range**: 300 units
 - **Speed**: 1.0 attacks/second
 - **Type**: Single target
+- **Coordination**: Cannot attack while right katana is attacking
 
-#### Q - Echoes of Data
+#### Q - Code Break
+- **Damage**: Soul
+- **Range**: 600 units
+- **Cooldown**: 6 seconds
+- **Effect**: Enhanced slash dealing soul damage
+
+#### Tab - Echoes of Data
 - **Damage**: Soul (to marked target)
 - **Range**: 4000 units
 - **Cooldown**: 5 seconds
@@ -118,41 +128,33 @@ Dynamic conditions affecting gameplay:
 - **Effect**: Marked enemy receives 75% of damage dealt to others as soul damage
 - **AoE Rule**: 30% damage for area attacks
 
-#### E - Code Break
-- **Damage**: Soul
-- **Range**: 600 units
-- **Cooldown**: 6 seconds
-- **Effect**: Enhanced slash dealing soul damage
-
-#### Space - Scripted Dodge
+#### Shift - Scripted Dodge
 - **Window**: 1.5 seconds total
 - **Moderate (0-0.75s)**: Take 50% damage
 - **Perfect (0.75-1.5s)**: No damage + Code Break cooldown reset
 - **Visual**: Orange (moderate) → Green (perfect)
 
-### Divine Anchor
-*Heavy weapon with crowd control and physics*
+### Right Katana (Physical Katana)
+*Powerful physical damage weapon with defensive capabilities*
 
-#### Basic Attack - Smash
-- **Damage**: Physical, Area
-- **Range**: 400 units radius
-- **Speed**: 0.5 attacks/second
-- **Effect**: Knockback 100 units with physics
-- **Physics**: 500 force, 0.5 upward ratio
-
-#### Q - Gravity Pull
+#### Basic Attack - Physical Slash (RMB)
 - **Damage**: Physical
-- **Range**: 1000 units
-- **Cooldown**: 6 seconds
-- **Effect**: Pulls enemy with physics arc
-- **Vulnerable**: 1.5 seconds while airborne
-- **Physics**: 2.5x force multiplier, 600 upward velocity
+- **Range**: 350 units
+- **Speed**: 0.8 attacks/second
+- **Type**: Single target
+- **Coordination**: Cannot attack while left katana is attacking
 
-#### E - Holy Gravity
-- **Damage**: Physical, Area
-- **Range**: 1000 units radius
-- **Cooldown**: 10 seconds
-- **Effect**: All enemies vulnerable for 2 seconds
+#### E - (To Be Implemented)
+- **Damage**: Physical
+- **Range**: 400 units
+- **Cooldown**: 6 seconds
+- **Effect**: TBD
+
+#### R - (To Be Implemented)
+- **Damage**: Physical
+- **Range**: 600 units
+- **Cooldown**: 8 seconds
+- **Effect**: TBD
 
 #### Space - Order
 - **Window**: 1.5 seconds total
@@ -161,6 +163,7 @@ Dynamic conditions affecting gameplay:
 - **Counter Effect**: 
   - Strips shield if present
   - Reduces armor by 25% if no shield
+- **Non-Combat**: Functions as jump
 
 ---
 
@@ -464,12 +467,16 @@ UTrinityFlowWeaponStats
 |--------|-----|---------|
 | Move | WASD | Always |
 | Look | Mouse | Always |
-| Attack | LMB | Always |
-| Ability Q | Q | Always |
-| Ability E | E | Always |
-| Switch Weapon | Tab | Always |
+| Left Katana Attack | LMB | Always |
+| Right Katana Attack | RMB | Always |
+| Left Ability 1 (Code Break) | Q | Always |
+| Left Ability 2 (Echoes) | Tab | Always |
+| Right Ability 1 | E | Combat |
+| Interact | E | Non-Combat |
+| Right Ability 2 | R | Always |
+| Left Defensive (Dodge) | Shift | Combat |
+| Right Defensive (Order) | Space | Combat |
 | Jump | Space | Non-Combat |
-| Defensive | Space | Combat |
 
 ### Testing Features
 - Runtime stat reloading
@@ -612,5 +619,82 @@ Configure these in the character stats data assets.
 
 ---
 
-*Last Updated: 2025-07-24*  
-*Version: 1.0*
+## Future Development Plans
+
+### Animation System (Immediate Priority)
+- **Combo System Implementation**
+  - C++ driven animation montage sequences
+  - Light attack combos (LMB): 3-hit soul damage chain
+  - Heavy attack combos (RMB): 2-hit physical damage chain
+  - Mixed combos: Alternating between weapons
+  - Combo timing windows and reset conditions
+  
+- **Animation Montages**
+  - Unique attack animations for each katana
+  - Transition animations between combos
+  - Ability cast animations
+  - Hit reaction animations
+  - Defensive ability animations
+
+- **Animation Blueprint Integration**
+  - State machine for combat animations
+  - Blend spaces for movement
+  - Animation notifies for damage timing
+  - Root motion support for special attacks
+
+### Combat Enhancements
+- **Right Katana Abilities**
+  - E Ability: "Rending Strike" - Armor-piercing slash
+  - R Ability: "Whirlwind" - 360° area attack
+  
+- **Combo Finishers**
+  - Special animations for combo endings
+  - Enhanced damage/effects on finishers
+  - Unique visual effects per weapon
+
+- **Combat Feel Improvements**
+  - Hit pause/freeze frames
+  - Camera shake on impacts
+  - Improved particle effects
+  - Sound effect integration
+
+### Interactable System
+- **Object Types**
+  - Treasure chests
+  - Upgrade stations
+  - Lore tablets
+  - Health shrines
+  
+- **Interaction Framework**
+  - Base interactable class
+  - Progress bars for timed interactions
+  - Interrupt conditions
+  - Multiplayer support considerations
+
+### Weapon Upgrade System
+- **Upgrade Paths**
+  - Damage upgrades
+  - Range extensions
+  - Cooldown reductions
+  - New combo branches
+  
+- **Visual Progression**
+  - Weapon glow/effects based on upgrade level
+  - Unique models for max-level weapons
+
+### Performance Optimizations
+- Animation LOD system
+- Combo prediction for networking
+- Effect pooling for particles
+- Optimized collision detection
+
+### Technical Debt
+- Remove Divine Anchor completely
+- Refactor old weapon switching code
+- Clean up deprecated methods
+- Update unit tests
+
+---
+
+*Last Updated: 2025-07-28*  
+*Version: 2.0*

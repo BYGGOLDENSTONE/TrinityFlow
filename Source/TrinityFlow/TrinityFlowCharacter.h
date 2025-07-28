@@ -61,9 +61,21 @@ class ATrinityFlowCharacter : public ACharacter
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* AbilityEAction;
 
-	/** Switch Weapon Input Action */
+	/** Ability Tab Input Action (Left Katana Ability 2) */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
-	UInputAction* SwitchWeaponAction;
+	UInputAction* AbilityTabAction;
+
+	/** Ability R Input Action (Right Katana Ability 2) */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* AbilityRAction;
+
+	/** Left Defensive Input Action (Shift) */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* LeftDefensiveAction;
+
+	/** Right Defensive Input Action (Space) */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* RightDefensiveAction;
 
 public:
 	ATrinityFlowCharacter();
@@ -84,10 +96,13 @@ public:
 	AActor* GetTargetInSight();
 
 	UFUNCTION()
-	bool IsKatanaActive() const { return bIsKatanaActive; }
+	class AOverrideKatana* GetLeftKatana() const { return LeftKatana; }
 
 	UFUNCTION()
-	class AWeaponBase* GetCurrentWeapon() const { return CurrentWeapon; }
+	class APhysicalKatana* GetRightKatana() const { return RightKatana; }
+
+	UFUNCTION()
+	bool IsAttacking() const { return bIsAttacking; }
 	
 	// Defensive ability handling
 	UFUNCTION()
@@ -114,18 +129,21 @@ protected:
 	void Look(const FInputActionValue& Value);
 
 	/** Called for attack input */
-	void Attack();
-	void RightAttack();
+	void LeftKatanaAttack();   // LMB - Soul damage
+	void RightKatanaAttack();  // RMB - Physical damage
 
 	/** Called for ability inputs */
-	void AbilityQ();
-	void AbilityE();
+	void AbilityQ();      // Left katana ability 1 (Code Break)
+	void AbilityE();      // Right katana ability 1
+	void AbilityTab();    // Left katana ability 2 (Echoes of Data)
+	void AbilityR();      // Right katana ability 2
 
-	/** Called for weapon switch */
-	void SwitchWeapon();
+	/** Called for defensive abilities */
+	void LeftDefensiveAbility();   // Shift - Scripted Dodge
+	void RightDefensiveAbility();  // Space - Order
 
-	/** Called for defensive ability (contextual jump/defense) */
-	void DefensiveAbility();
+	/** Called when attack completes */
+	void OnAttackComplete();
 
 	/** Components */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
@@ -142,22 +160,31 @@ protected:
 
 	/** Weapons */
 	UPROPERTY()
-	class AWeaponBase* CurrentWeapon;
+	class AOverrideKatana* LeftKatana;  // Soul damage katana
 
 	UPROPERTY()
-	class AOverrideKatana* OverrideKatana;
+	class APhysicalKatana* RightKatana;  // Physical damage katana
+
+	// Attack coordination system
+	UPROPERTY()
+	bool bIsAttacking = false;
 
 	UPROPERTY()
-	class ADivineAnchor* DivineAnchor;
+	class AWeaponBase* CurrentAttackingWeapon = nullptr;
 
-	bool bIsKatanaActive = true;
+	UPROPERTY()
+	float AttackEndTime = 0.0f;
 
 	// Combat Animation Montages (to be set in Blueprint)
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat|Animation")
-	class UAnimMontage* LeftAttackMontage;
+	class UAnimMontage* LeftKatanaAttackMontage;  // Soul katana attack
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat|Animation")
-	class UAnimMontage* RightAttackMontage;
+	class UAnimMontage* RightKatanaAttackMontage;  // Physical katana attack
+
+	// Interaction Animation Montage (to be set in Blueprint)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Interaction|Animation")
+	class UAnimMontage* InteractionMontage;
 	
 	// Defensive ability state
 	bool bDefensiveAbilityActive = false;

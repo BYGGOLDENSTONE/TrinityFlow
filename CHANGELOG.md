@@ -2,7 +2,71 @@
 
 All notable changes to TrinityFlow are documented in this file.
 
-## [Latest] - 2025-07-27
+## [Latest] - 2025-07-28
+
+### Added
+- **Dual-Wielding Katana System**
+  - Complete overhaul from single weapon to dual katana system
+  - Left Katana (OverrideKatana): Soul damage weapon
+  - Right Katana (PhysicalKatana): Physical damage weapon
+  - Attack coordination system preventing simultaneous basic attacks
+  - Separate defensive abilities for each weapon
+
+- **New Input System**
+  - LMB: Left katana attack (soul damage)
+  - RMB: Right katana attack (physical damage)
+  - Q: Code Break (left katana ability)
+  - Tab: Echoes of Data (left katana ability)
+  - E: Right katana ability / Interaction (non-combat)
+  - R: Right katana ability 2
+  - Shift: Scripted Dodge (left katana defensive)
+  - Space: Order (right katana defensive) / Jump (non-combat)
+
+- **PhysicalKatana Class**
+  - New weapon class for physical damage
+  - Order defensive ability from Divine Anchor
+  - Counter-attack system that strips shields or reduces armor
+  - Placeholder abilities for E and R keys
+
+- **Enhanced Stats System**
+  - PhysicalKatanaStats data asset class
+  - Updated game instance for dual katana stats
+  - Separate upgrade paths for each weapon
+
+- **Interaction System**
+  - Added interaction animation montage support
+  - E key triggers interaction in non-combat state
+  - Foundation for future interactable objects
+
+### Changed
+- **OverrideKatana Updates**
+  - Now deals soul damage instead of physical
+  - Abilities remapped: Q for Code Break, Tab for Echoes of Data
+  - Removed left/right attack alternation
+  
+- **Character System**
+  - Removed weapon switching mechanic
+  - Added attack coordination with bIsAttacking flag
+  - Dual weapon attachment (hand_l and hand_r sockets)
+  
+- **HUD Improvements**
+  - Updated to display dual katana information
+  - Separate cooldown tracking for each weapon
+  - Repositioned health bar to bottom left corner
+  - Fixed overlap between health bar and ability info
+
+### Fixed
+- Compilation errors with stats subsystem
+- HUD color references (Cyan/Orange)
+- HealthComponent defense point access
+- Missing includes for new weapon classes
+
+### Deprecated
+- Divine Anchor weapon system (to be removed)
+- Single weapon switching system
+- IsKatanaActive() and GetCurrentWeapon() methods
+
+## [Previous] - 2025-07-27
 
 ### Added
 - **Dual Attack System for Katana**

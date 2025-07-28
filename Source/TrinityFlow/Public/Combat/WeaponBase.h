@@ -28,6 +28,9 @@ public:
     virtual void AbilityE(AActor* Target) { }
 
     UFUNCTION()
+    virtual void AbilityR(AActor* Target) { }  // New ability for dual-wielding
+
+    UFUNCTION()
     virtual void DefensiveAbility() { }
 
     UFUNCTION()
@@ -41,6 +44,9 @@ public:
 
     UFUNCTION()
     float GetAbilityECooldownRemaining() const { return AbilityECooldownTimer; }
+
+    UFUNCTION()
+    float GetAttackDuration() const { return BasicAttackDamageDelay + 0.5f; } // Attack time + recovery
 
     virtual void Tick(float DeltaTime) override;
 

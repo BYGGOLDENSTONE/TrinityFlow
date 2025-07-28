@@ -4,7 +4,7 @@
 #include "Core/TagComponent.h"
 #include "Core/StateComponent.h"
 #include "Player/OverrideKatana.h"
-#include "Player/DivineAnchor.h"
+#include "Player/PhysicalKatana.h"
 #include "Enemy/EnemyBase.h"
 #include "Engine/Canvas.h"
 #include "Engine/Engine.h"
@@ -82,8 +82,9 @@ void ATrinityFlowHUD::DrawHealthBar()
     {
         float HealthPercentage = HealthComp->GetHealthPercentage();
         
-        float X = ViewportSize.X * 0.5f - HealthBarWidth * 0.5f;
-        float Y = ViewportSize.Y - 100.0f;
+        // Position above player info at bottom left
+        float X = 20.0f;
+        float Y = ViewportSize.Y - 140.0f;  // Above player info section
 
         // Background
         DrawRect(FLinearColor::Black, X - 2, Y - 2, HealthBarWidth + 4, HealthBarHeight + 4);
@@ -223,8 +224,9 @@ void ATrinityFlowHUD::DrawEnemyInfo(AEnemyBase* Enemy, float ScreenX, float Scre
 
 void ATrinityFlowHUD::DrawPlayerInfo()
 {
+    // Position at bottom left corner
     float X = 20.0f;
-    float Y = 100.0f;
+    float Y = ViewportSize.Y - 120.0f;  // Start from bottom with some margin
 
     // Title with shadow
     FString Title = TEXT("=== PLAYER INFO ===");
@@ -279,32 +281,48 @@ void ATrinityFlowHUD::DrawWeaponInfo()
     float X = ViewportSize.X * 0.5f - 150.0f;
     float Y = ViewportSize.Y - 150.0f;
 
-    FString WeaponName = PlayerCharacter->IsKatanaActive() ? TEXT("Override Katana") : TEXT("Divine Anchor");
-    DrawText(TEXT("Current Weapon: ") + WeaponName, FLinearColor::White, X, Y);
+    DrawText(TEXT("Dual Katanas"), FLinearColor::White, X, Y);
+    Y += LineHeight;
+
+    // Left Katana (Soul damage) cooldowns
+    if (AOverrideKatana* LeftKatana = PlayerCharacter->GetLeftKatana())
+    {
+        float QCooldown = LeftKatana->GetAbilityQCooldownRemaining();
+        float TabCooldown = LeftKatana->GetAbilityECooldownRemaining(); // Using E cooldown for Tab
+        
+        FString QText = QCooldown > 0 ? FString::Printf(TEXT("Q: %.1fs"), QCooldown) : TEXT("Q: Ready");
+        FString TabText = TabCooldown > 0 ? FString::Printf(TEXT("Tab: %.1fs"), TabCooldown) : TEXT("Tab: Ready");
+        
+        FLinearColor QColor = QCooldown > 0 ? FLinearColor::Red : FLinearColor::Green;
+        FLinearColor TabColor = TabCooldown > 0 ? FLinearColor::Red : FLinearColor::Green;
+        
+        DrawText(TEXT("Left (Soul):"), FLinearColor(0.0f, 1.0f, 1.0f), X, Y);  // Cyan color
+        DrawText(QText, QColor, X + 80, Y);
+        DrawText(TabText, TabColor, X + 180, Y);
+    }
 
     Y += LineHeight;
 
-    // Ability cooldowns
-    if (AWeaponBase* Weapon = PlayerCharacter->GetCurrentWeapon())
+    // Right Katana (Physical damage) cooldowns
+    if (APhysicalKatana* RightKatana = PlayerCharacter->GetRightKatana())
     {
-        float QCooldown = Weapon->GetAbilityQCooldownRemaining();
-        float ECooldown = Weapon->GetAbilityECooldownRemaining();
-
-        FString QText = QCooldown > 0 ? FString::Printf(TEXT("Q: %.1fs"), QCooldown) : TEXT("Q: Ready");
+        float ECooldown = RightKatana->GetAbilityECooldownRemaining();
+        
         FString EText = ECooldown > 0 ? FString::Printf(TEXT("E: %.1fs"), ECooldown) : TEXT("E: Ready");
-
-        FLinearColor QColor = QCooldown > 0 ? FLinearColor::Red : FLinearColor::Green;
+        FString RText = TEXT("R: Ready");
+        
         FLinearColor EColor = ECooldown > 0 ? FLinearColor::Red : FLinearColor::Green;
-
-        DrawText(QText, QColor, X, Y);
-        DrawText(EText, EColor, X + 100, Y);
+        
+        DrawText(TEXT("Right (Phys):"), FLinearColor(1.0f, 0.5f, 0.0f), X, Y);  // Orange color
+        DrawText(EText, EColor, X + 80, Y);
+        DrawText(RText, FLinearColor::Gray, X + 180, Y);
     }
 }
 
 void ATrinityFlowHUD::DrawNearbyEnemies()
 {
     float X = 20.0f;
-    float Y = ViewportSize.Y - 300.0f;
+    float Y = 100.0f;  // Position at top left
 
     DrawText(TEXT("=== NEARBY ENEMIES ==="), FLinearColor::Yellow, X, Y);
     Y += LineHeight;

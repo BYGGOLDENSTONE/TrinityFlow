@@ -31,10 +31,10 @@ public:
     class UTrinityFlowCharacterStats* DefaultPlayerStats;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stats Configuration")
-    class UTrinityFlowKatanaStats* DefaultKatanaStats;
+    class UTrinityFlowKatanaStats* DefaultLeftKatanaStats;  // Soul damage katana
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stats Configuration")
-    class UTrinityFlowAnchorStats* DefaultAnchorStats;
+    class UTrinityFlowPhysicalKatanaStats* DefaultRightKatanaStats;  // Physical damage katana
 
 private:
     void ConfigureStatsSubsystem();
