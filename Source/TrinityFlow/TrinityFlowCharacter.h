@@ -120,6 +120,9 @@ public:
 	UFUNCTION()
 	void RegisterEnemyDamageEvents(class AEnemyBase* Enemy);
 
+	UFUNCTION()
+	void OnStateChanged(ECharacterState NewState);
+
 protected:
 
 	/** Called for movement input */
@@ -158,6 +161,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	class UAbilityComponent* AbilityComponent;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	class UAnimationComponent* AnimationComponent;
+
 	/** Weapons */
 	UPROPERTY()
 	class AOverrideKatana* LeftKatana;  // Soul damage katana
@@ -174,17 +180,6 @@ protected:
 
 	UPROPERTY()
 	float AttackEndTime = 0.0f;
-
-	// Combat Animation Montages (to be set in Blueprint)
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat|Animation")
-	class UAnimMontage* LeftKatanaAttackMontage;  // Soul katana attack
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat|Animation")
-	class UAnimMontage* RightKatanaAttackMontage;  // Physical katana attack
-
-	// Interaction Animation Montage (to be set in Blueprint)
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Interaction|Animation")
-	class UAnimMontage* InteractionMontage;
 	
 	// Defensive ability state
 	bool bDefensiveAbilityActive = false;

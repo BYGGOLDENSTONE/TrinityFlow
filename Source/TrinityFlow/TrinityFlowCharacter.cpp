@@ -13,6 +13,7 @@
 #include "Core/HealthComponent.h"
 #include "Core/TagComponent.h"
 #include "Core/StateComponent.h"
+#include "Core/AnimationComponent.h"
 #include "Core/TrinityFlowStatsSubsystem.h"
 #include "Data/TrinityFlowCharacterStats.h"
 #include "Combat/AbilityComponent.h"
@@ -79,6 +80,7 @@ ATrinityFlowCharacter::ATrinityFlowCharacter()
 	TagComponent = CreateDefaultSubobject<UTagComponent>(TEXT("TagComponent"));
 	StateComponent = CreateDefaultSubobject<UStateComponent>(TEXT("StateComponent"));
 	AbilityComponent = CreateDefaultSubobject<UAbilityComponent>(TEXT("AbilityComponent"));
+	AnimationComponent = CreateDefaultSubobject<UAnimationComponent>(TEXT("AnimationComponent"));
 
 	PrimaryActorTick.bCanEverTick = true;
 }
@@ -152,6 +154,13 @@ void ATrinityFlowCharacter::Move(const FInputActionValue& Value)
 		// add movement 
 		AddMovementInput(ForwardDirection, MovementVector.Y);
 		AddMovementInput(RightDirection, MovementVector.X);
+
+		// Notify AnimationComponent of movement
+		if (AnimationComponent)
+		{
+			FVector Movement3D(MovementVector.X, MovementVector.Y, 0.0f);
+			AnimationComponent->OnMovementInput(Movement3D);
+		}
 	}
 }
 
@@ -242,6 +251,19 @@ void ATrinityFlowCharacter::BeginPlay()
 	{
 		HealthComponent->OnDamageDealt.AddDynamic(this, &ATrinityFlowCharacter::OnAnyDamageDealt);
 	}
+
+	// Setup AnimationComponent
+	if (AnimationComponent)
+	{
+		// Set initial combat state based on StateComponent
+		if (StateComponent)
+		{
+			AnimationComponent->SetCombatState(StateComponent->HasState(ECharacterState::Combat));
+			
+			// Register for state changes
+			StateComponent->OnStateChanged.AddDynamic(this, &ATrinityFlowCharacter::OnStateChanged);
+		}
+	}
 }
 
 void ATrinityFlowCharacter::Tick(float DeltaTime)
@@ -285,6 +307,13 @@ void ATrinityFlowCharacter::Tick(float DeltaTime)
 
 void ATrinityFlowCharacter::LeftKatanaAttack()
 {
+	// Check if animation is locked
+	if (AnimationComponent && !AnimationComponent->CanPlayNewAnimation())
+	{
+		UE_LOG(LogTemplateCharacter, Log, TEXT("Cannot attack: Animation is locked"));
+		return;
+	}
+	
 	// Check if any attack is in progress
 	if (bIsAttacking)
 	{
@@ -292,25 +321,30 @@ void ATrinityFlowCharacter::LeftKatanaAttack()
 		return;
 	}
 	
-	if (LeftKatana)
+	if (LeftKatana && AnimationComponent)
 	{
-		bIsAttacking = true;
-		CurrentAttackingWeapon = LeftKatana;
-		AttackEndTime = GetWorld()->GetTimeSeconds() + LeftKatana->GetAttackDuration();
-		
-		AActor* Target = GetTargetInSight();
-		LeftKatana->BasicAttack(Target);
-		
-		// Play left katana animation
-		if (LeftKatanaAttackMontage && GetMesh() && GetMesh()->GetAnimInstance())
+		// Play the attack animation
+		if (AnimationComponent->PlayAttackAnimation(true))
 		{
-			GetMesh()->GetAnimInstance()->Montage_Play(LeftKatanaAttackMontage);
+			bIsAttacking = true;
+			CurrentAttackingWeapon = LeftKatana;
+			AttackEndTime = GetWorld()->GetTimeSeconds() + LeftKatana->GetAttackDuration();
+			
+			AActor* Target = GetTargetInSight();
+			LeftKatana->BasicAttack(Target);
 		}
 	}
 }
 
 void ATrinityFlowCharacter::RightKatanaAttack()
 {
+	// Check if animation is locked
+	if (AnimationComponent && !AnimationComponent->CanPlayNewAnimation())
+	{
+		UE_LOG(LogTemplateCharacter, Log, TEXT("Cannot attack: Animation is locked"));
+		return;
+	}
+	
 	// Check if any attack is in progress
 	if (bIsAttacking)
 	{
@@ -318,19 +352,17 @@ void ATrinityFlowCharacter::RightKatanaAttack()
 		return;
 	}
 	
-	if (RightKatana)
+	if (RightKatana && AnimationComponent)
 	{
-		bIsAttacking = true;
-		CurrentAttackingWeapon = RightKatana;
-		AttackEndTime = GetWorld()->GetTimeSeconds() + RightKatana->GetAttackDuration();
-		
-		AActor* Target = GetTargetInSight();
-		RightKatana->BasicAttack(Target);
-		
-		// Play right katana animation
-		if (RightKatanaAttackMontage && GetMesh() && GetMesh()->GetAnimInstance())
+		// Play the attack animation
+		if (AnimationComponent->PlayAttackAnimation(false))
 		{
-			GetMesh()->GetAnimInstance()->Montage_Play(RightKatanaAttackMontage);
+			bIsAttacking = true;
+			CurrentAttackingWeapon = RightKatana;
+			AttackEndTime = GetWorld()->GetTimeSeconds() + RightKatana->GetAttackDuration();
+			
+			AActor* Target = GetTargetInSight();
+			RightKatana->BasicAttack(Target);
 		}
 	}
 }
@@ -345,6 +377,13 @@ void ATrinityFlowCharacter::OnAttackComplete()
 
 void ATrinityFlowCharacter::AbilityQ()
 {
+	// Check if animation is locked
+	if (AnimationComponent && !AnimationComponent->CanPlayNewAnimation())
+	{
+		UE_LOG(LogTemplateCharacter, Log, TEXT("Cannot use ability: Animation is locked"));
+		return;
+	}
+	
 	// Left katana ability 1 - Code Break
 	if (LeftKatana)
 	{
@@ -355,14 +394,23 @@ void ATrinityFlowCharacter::AbilityQ()
 
 void ATrinityFlowCharacter::AbilityE()
 {
+	// Check if animation is locked
+	if (AnimationComponent && !AnimationComponent->CanPlayNewAnimation())
+	{
+		UE_LOG(LogTemplateCharacter, Log, TEXT("Cannot use ability: Animation is locked"));
+		return;
+	}
+	
 	// Check if we're in non-combat state
 	if (StateComponent && !StateComponent->HasState(ECharacterState::Combat))
 	{
-		// In non-combat state - play interaction animation
-		if (InteractionMontage && GetMesh() && GetMesh()->GetAnimInstance())
+		// In non-combat state - play interaction animation through AnimationComponent
+		if (AnimationComponent)
 		{
-			GetMesh()->GetAnimInstance()->Montage_Play(InteractionMontage);
-			UE_LOG(LogTemplateCharacter, Log, TEXT("Playing interaction montage"));
+			if (AnimationComponent->PlayInteractionMontage())
+			{
+				UE_LOG(LogTemplateCharacter, Log, TEXT("Playing interaction montage"));
+			}
 		}
 	}
 	else if (RightKatana)
@@ -375,6 +423,13 @@ void ATrinityFlowCharacter::AbilityE()
 
 void ATrinityFlowCharacter::AbilityTab()
 {
+	// Check if animation is locked
+	if (AnimationComponent && !AnimationComponent->CanPlayNewAnimation())
+	{
+		UE_LOG(LogTemplateCharacter, Log, TEXT("Cannot use ability: Animation is locked"));
+		return;
+	}
+	
 	// Left katana ability 2 - Echoes of Data
 	if (LeftKatana)
 	{
@@ -385,6 +440,13 @@ void ATrinityFlowCharacter::AbilityTab()
 
 void ATrinityFlowCharacter::AbilityR()
 {
+	// Check if animation is locked
+	if (AnimationComponent && !AnimationComponent->CanPlayNewAnimation())
+	{
+		UE_LOG(LogTemplateCharacter, Log, TEXT("Cannot use ability: Animation is locked"));
+		return;
+	}
+	
 	// Right katana ability 2
 	if (RightKatana)
 	{
@@ -395,6 +457,13 @@ void ATrinityFlowCharacter::AbilityR()
 
 void ATrinityFlowCharacter::LeftDefensiveAbility()
 {
+	// Check if animation is locked
+	if (AnimationComponent && !AnimationComponent->CanPlayNewAnimation())
+	{
+		UE_LOG(LogTemplateCharacter, Log, TEXT("Cannot use defensive ability: Animation is locked"));
+		return;
+	}
+	
 	// Shift key - Scripted Dodge for left katana
 	if (StateComponent && StateComponent->HasState(ECharacterState::Combat))
 	{
@@ -439,6 +508,16 @@ void ATrinityFlowCharacter::LeftDefensiveAbility()
 
 void ATrinityFlowCharacter::RightDefensiveAbility()
 {
+	// Check if animation is locked (only for combat actions)
+	if (StateComponent && StateComponent->HasState(ECharacterState::Combat))
+	{
+		if (AnimationComponent && !AnimationComponent->CanPlayNewAnimation())
+		{
+			UE_LOG(LogTemplateCharacter, Log, TEXT("Cannot use defensive ability: Animation is locked"));
+			return;
+		}
+	}
+	
 	// Space key - Order for right katana
 	if (StateComponent && StateComponent->HasState(ECharacterState::Combat))
 	{
@@ -539,4 +618,16 @@ AActor* ATrinityFlowCharacter::GetTargetInSight()
 	}
 
 	return nullptr;
+}
+
+void ATrinityFlowCharacter::OnStateChanged(ECharacterState NewState)
+{
+	// Update AnimationComponent based on combat state
+	if (AnimationComponent)
+	{
+		bool bInCombat = (NewState & ECharacterState::Combat) != ECharacterState::None;
+		AnimationComponent->SetCombatState(bInCombat);
+		
+		UE_LOG(LogTemplateCharacter, Log, TEXT("Combat state changed: %s"), bInCombat ? TEXT("In Combat") : TEXT("Out of Combat"));
+	}
 }

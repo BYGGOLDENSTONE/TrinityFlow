@@ -2,7 +2,51 @@
 
 All notable changes to TrinityFlow are documented in this file.
 
-## [Latest] - 2025-07-28
+## [Latest] - 2025-07-28 (Update 2)
+
+### Added
+- **Animation Component System**
+  - New `AnimationComponent` for centralized animation management
+  - All montages organized in one component with Blueprint categories
+  - Configurable timing parameters exposed to editor
+  
+- **New Combo Animation System**
+  - Replaced freeze-frame with dynamic wait animations
+  - Attack flow: First attack → Wait animation → Second attack or idle
+  - Spam combo detection for rapid button presses
+  - Movement input cancels combo chains
+  - State-based attack management (None, FirstAttack, WaitingForCombo, SecondAttack, ComboAttack)
+  
+- **Montage Structure**
+  - Right Attack: `RightSlash1`, `RightSlash1Wait`, `RightSlash2`, `RightSlashCombo`
+  - Left Attack: `LeftSlash1`, `LeftSlash1Wait`, `LeftSlash2`, `LeftSlashCombo`
+  - General: `NonCombatIdleMontage`, `CombatIdleMontage`, `InteractionMontage`
+  - Two idle animations: combat and non-combat states
+
+- **Timing Configuration**
+  - Spam Combo Threshold (default 0.3s) - Time window for rapid attacks
+  - Attack Montage Play Rate - Speed multiplier for attacks
+  - Combo Window Duration - Time to input next attack
+
+### Changed
+- **Animation System Overhaul**
+  - Removed freeze frame system in favor of wait animations
+  - Consolidated all montage properties from Character to AnimationComponent
+  - Updated attack system to use state machine instead of index-based combos
+  - Improved interaction montage handling with proper locking
+  
+- **Combat Flow**
+  - More fluid transitions between animations
+  - Natural combo chains with visual feedback
+  - Better attack coordination between dual katanas
+
+### Fixed
+- Animation interruption issues during attacks
+- Interaction montage early termination
+- Combat state transition animations
+- Idle animation looping in different states
+
+## [2025-07-28] - Dual-Wielding Implementation
 
 ### Added
 - **Dual-Wielding Katana System**

@@ -12,20 +12,19 @@ TrinityFlow is a fast-paced action game where players wield two distinct weapons
 - **Physical Damage**: Reduced by defense points, blocked by shields
 - **Soul Damage**: Bypasses all defenses with 2x damage multiplier
 
-### Two Unique Weapons
+### Dual-Wielding Combat System
 
-#### Override Katana
-- Fast, precise strikes with soul damage abilities
-- **Echoes of Data**: Mark enemies to receive echo damage (75% of damage dealt to others)
-- **Code Break**: Enhanced soul damage slash
-- **Scripted Dodge**: Perfect timing resets cooldowns
+#### Left Katana (Soul Damage)
+- Fast, precise strikes that bypass all defenses
+- **Code Break (Q)**: Enhanced soul damage slash
+- **Echoes of Data (Tab)**: Mark enemies to receive echo damage (75% of damage dealt to others)
+- **Scripted Dodge (Shift)**: Perfect timing resets cooldowns
 
-#### Divine Anchor
-- Heavy weapon with crowd control and physics-based abilities
-- **Smash**: Area damage with knockback
-- **Gravity Pull**: Physics-based enemy pulling with arc trajectory
-- **Holy Gravity**: Large AoE that makes all enemies vulnerable
-- **Order**: Counter that strips shields/armor
+#### Right Katana (Physical Damage)
+- Traditional physical attacks affected by armor and shields
+- **Ability 1 (E)**: TBD - Physical damage ability
+- **Ability 2 (R)**: TBD - Physical damage ability
+- **Order (Space)**: Defensive counter from Divine Anchor heritage
 
 ### Enemy Variety
 - **Standard Enemy**: Basic melee attacker
@@ -115,12 +114,14 @@ TrinityFlow/
 
 - **Movement**: WASD
 - **Camera**: Mouse
-- **Attack**: Left Mouse Button
-- **Ability Q**: Q key
-- **Ability E**: E key
-- **Switch Weapon**: Tab
-- **Defensive Ability**: Space (in combat)
-- **Jump**: Space (out of combat)
+- **Left Katana Attack**: Left Mouse Button (Soul damage)
+- **Right Katana Attack**: Right Mouse Button (Physical damage)
+- **Ability Q**: Q key (Code Break - Left katana)
+- **Ability E**: E key (Right katana ability / Interaction)
+- **Ability Tab**: Tab key (Echoes of Data - Left katana)
+- **Ability R**: R key (Right katana ability)
+- **Left Defensive**: Shift (Scripted Dodge)
+- **Right Defensive**: Space (Order / Jump out of combat)
 
 ## Documentation
 
@@ -130,6 +131,19 @@ TrinityFlow/
 
 ## Recent Updates
 
+### Animation & Combat System Overhaul
+- **Dual-Wielding System**: Implemented left (soul damage) and right (physical damage) katana system
+- **New Combo System**: Dynamic attack chains with wait animations
+  - Normal combo: Attack → Wait animation → Second attack
+  - Spam combo: Rapid attacks trigger special combo animation
+  - Movement cancels combo chains
+- **AnimationComponent**: Centralized animation management
+  - All montages organized in one component
+  - Configurable timing for combos
+  - Smooth transitions between states
+- **State-Based Attack Flow**: Proper attack state management prevents animation conflicts
+
+### Previous Updates
 - **Stats Management System**: All gameplay values now editable in editor
 - **Player Stats Integration**: Player now loads stats from the subsystem like enemies
 - **Tag System Fix**: Fixed bitmask enum display issues in editor
