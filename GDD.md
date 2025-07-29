@@ -619,9 +619,31 @@ Configure these in the character stats data assets.
 
 ---
 
+## Current Project Status (2025-07-29)
+
+### What's Implemented
+- ✅ **Dual-Wielding Combat System**: Left katana (soul damage) and right katana (physical damage)
+- ✅ **Animation System**: Simplified with 4 montages (attacks, interaction, wondering)
+- ✅ **Enemy AI**: State machine with Idle, Chase, and Attack states
+- ✅ **Stats Management**: Data-driven system for all gameplay values
+- ✅ **Combat Visuals**: Damage numbers, enemy info panels, attack indicators
+- ✅ **Physics Combat**: Gravity pull and knockback systems
+
+### What's NOT Implemented
+- ❌ **Right Katana Abilities**: E and R abilities are placeholders
+- ❌ **Divine Anchor**: Removed but code references remain
+- ❌ **Save System**: No persistence between sessions
+- ❌ **Level Progression**: No chapter/level system
+- ❌ **Combo Finishers**: Simplified animation system doesn't support complex combos
+
+### Known Issues
+- Animation timing can be inconsistent due to blueprint speed scaling
+- Some deprecated weapon switching code remains
+- Divine Anchor references need cleanup
+
 ## Future Development Plans
 
-### Animation System (Immediate Priority)
+### Animation System (Next Priority)
 - **Combo System Implementation**
   - C++ driven animation montage sequences
   - Light attack combos (LMB): 3-hit soul damage chain

@@ -4,6 +4,16 @@ All notable changes to TrinityFlow are documented in this file.
 
 ## [Latest] - 2025-07-29
 
+### Removed
+- **Chapter System**: Removed entire chapter/level streaming system due to editor crashes
+  - Deleted all Chapter-related classes (ChapterManager, ChapterData, ChapterVolumes, LevelFactory)
+  - Removed Quest system classes
+  - Removed editor module dependencies
+  - Cleaned up documentation and build files
+  - Decision: Focus on core combat mechanics rather than complex level management
+
+## [2025-07-29] - Earlier
+
 ### Changed
 - **Simplified Animation System**
   - Removed complex combo system and input buffering

@@ -132,9 +132,8 @@ TrinityFlow/
 
 ## Documentation
 
-- [Game Design Document](GDD.txt) - Original design specifications
-- [Additions to GDD](ADDITIONS_TO_GDD.md) - Features added beyond original design
-- [Stats System Guide](STATS_SYSTEM_GUIDE.md) - How to use the stats management system
+- [Game Design Document](GDD.md) - Complete game design specifications
+- [Changelog](CHANGELOG.md) - Detailed update history
 
 ## Recent Updates
 
@@ -151,12 +150,16 @@ TrinityFlow/
 - **State-Based Attack Flow**: Proper attack state management prevents animation conflicts
 
 ### Previous Updates
+- **Simplified Animation System**: Direct attack execution with 4 essential montages
+- **Enemy AI System**: Pure C++ state machine implementation
 - **Stats Management System**: All gameplay values now editable in editor
-- **Player Stats Integration**: Player now loads stats from the subsystem like enemies
-- **Tag System Fix**: Fixed bitmask enum display issues in editor
-- **Data-Driven Tags**: Configure tags via data tables with proper enum metadata
+- **Dual-Wielding Implementation**: Complete katana system overhaul
 - **Combat Visual Improvements**: Better damage feedback and enemy info display
 - **Physics Fixes**: Improved gravity pull and knockback mechanics
+
+## Current Status
+
+The project is a functional combat prototype focusing on the unique dual-damage system. Key features are implemented and working, but some planned features (right katana abilities, save system) are not yet developed. The codebase prioritizes clean, maintainable C++ over complex systems.
 
 ## Development
 
