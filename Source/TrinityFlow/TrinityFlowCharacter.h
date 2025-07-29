@@ -123,6 +123,10 @@ public:
 	UFUNCTION()
 	void OnStateChanged(ECharacterState NewState);
 
+	/** Called when attack completes */
+	UFUNCTION()
+	void OnAttackComplete();
+
 protected:
 
 	/** Called for movement input */
@@ -144,9 +148,6 @@ protected:
 	/** Called for defensive abilities */
 	void LeftDefensiveAbility();   // Shift - Scripted Dodge
 	void RightDefensiveAbility();  // Space - Order
-
-	/** Called when attack completes */
-	void OnAttackComplete();
 
 	/** Components */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")

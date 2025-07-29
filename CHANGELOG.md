@@ -2,7 +2,47 @@
 
 All notable changes to TrinityFlow are documented in this file.
 
-## [Latest] - 2025-07-28 (Update 2)
+## [Latest] - 2025-07-29
+
+### Changed
+- **Simplified Animation System**
+  - Removed complex combo system and input buffering
+  - Reduced to 4 essential montages: Right Slash, Left Slash, Interaction, Wondering
+  - Direct attack execution without buffering delays
+  - All animations now play in-place without root motion
+
+- **New Wondering Animation System**
+  - Added wondering animation that plays after 5 seconds of idle in non-combat state
+  - Resets on any player input or movement
+  - Replaces idle animation after timeout
+
+- **Attack Animation Timing**
+  - Fixed attack animations ending early (6-7 frames instead of 20)
+  - Now uses actual montage length instead of weapon duration
+  - Added configurable Attack Animation Speed Scale property
+  - Removed tick-based attack completion in favor of animation callbacks
+
+### Fixed
+- **Animation Playback Issues**
+  - Fixed montages being cut short due to animation blueprint speed scaling
+  - Added compensation for montage rate scales
+  - Prevented weapon timer conflicts from interrupting animations
+  - Improved montage completion detection
+
+### Added
+- **Debug Logging**
+  - Extensive animation debugging information
+  - Montage progress tracking during playback
+  - Slot name and section count logging
+  - AnimNotify detection for troubleshooting
+
+### Technical Details
+- Removed all root motion code as animations are now in-place
+- Simplified AnimationComponent to ~300 lines from ~500
+- Attack timing now driven by animation length (0.2s for 20 frames at 60fps)
+- Configurable speed scale to compensate for blueprint animation speed issues
+
+## [2025-07-28] - Update 2
 
 ### Added
 - **Animation Component System**

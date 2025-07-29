@@ -270,12 +270,6 @@ void ATrinityFlowCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	// Check if attack has completed
-	if (bIsAttacking && GetWorld()->GetTimeSeconds() >= AttackEndTime)
-	{
-		OnAttackComplete();
-	}
-
 	// Update defensive window
 	if (bDefensiveAbilityActive)
 	{
@@ -307,62 +301,42 @@ void ATrinityFlowCharacter::Tick(float DeltaTime)
 
 void ATrinityFlowCharacter::LeftKatanaAttack()
 {
-	// Check if animation is locked
-	if (AnimationComponent && !AnimationComponent->CanPlayNewAnimation())
+	if (AnimationComponent && !bIsAttacking && LeftKatana)
 	{
-		UE_LOG(LogTemplateCharacter, Log, TEXT("Cannot attack: Animation is locked"));
-		return;
-	}
-	
-	// Check if any attack is in progress
-	if (bIsAttacking)
-	{
-		UE_LOG(LogTemplateCharacter, Log, TEXT("Cannot attack: Another attack in progress"));
-		return;
-	}
-	
-	if (LeftKatana && AnimationComponent)
-	{
-		// Play the attack animation
-		if (AnimationComponent->PlayAttackAnimation(true))
+		// Play attack animation and get montage length
+		float MontageLength = AnimationComponent->PlayAttackAnimation(true);
+		if (MontageLength > 0.0f)
 		{
+			// Animation started, execute the attack
 			bIsAttacking = true;
 			CurrentAttackingWeapon = LeftKatana;
-			AttackEndTime = GetWorld()->GetTimeSeconds() + LeftKatana->GetAttackDuration();
+			AttackEndTime = GetWorld()->GetTimeSeconds() + MontageLength;
 			
 			AActor* Target = GetTargetInSight();
 			LeftKatana->BasicAttack(Target);
+			
+			UE_LOG(LogTemplateCharacter, Log, TEXT("Executing left katana attack, duration: %.2f"), MontageLength);
 		}
 	}
 }
 
 void ATrinityFlowCharacter::RightKatanaAttack()
 {
-	// Check if animation is locked
-	if (AnimationComponent && !AnimationComponent->CanPlayNewAnimation())
+	if (AnimationComponent && !bIsAttacking && RightKatana)
 	{
-		UE_LOG(LogTemplateCharacter, Log, TEXT("Cannot attack: Animation is locked"));
-		return;
-	}
-	
-	// Check if any attack is in progress
-	if (bIsAttacking)
-	{
-		UE_LOG(LogTemplateCharacter, Log, TEXT("Cannot attack: Another attack in progress"));
-		return;
-	}
-	
-	if (RightKatana && AnimationComponent)
-	{
-		// Play the attack animation
-		if (AnimationComponent->PlayAttackAnimation(false))
+		// Play attack animation and get montage length
+		float MontageLength = AnimationComponent->PlayAttackAnimation(false);
+		if (MontageLength > 0.0f)
 		{
+			// Animation started, execute the attack
 			bIsAttacking = true;
 			CurrentAttackingWeapon = RightKatana;
-			AttackEndTime = GetWorld()->GetTimeSeconds() + RightKatana->GetAttackDuration();
+			AttackEndTime = GetWorld()->GetTimeSeconds() + MontageLength;
 			
 			AActor* Target = GetTargetInSight();
 			RightKatana->BasicAttack(Target);
+			
+			UE_LOG(LogTemplateCharacter, Log, TEXT("Executing right katana attack, duration: %.2f"), MontageLength);
 		}
 	}
 }
@@ -374,6 +348,7 @@ void ATrinityFlowCharacter::OnAttackComplete()
 	AttackEndTime = 0.0f;
 	UE_LOG(LogTemplateCharacter, VeryVerbose, TEXT("Attack completed, ready for next attack"));
 }
+
 
 void ATrinityFlowCharacter::AbilityQ()
 {

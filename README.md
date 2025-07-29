@@ -49,7 +49,14 @@ TrinityFlow is a fast-paced action game where players wield two distinct weapons
 
 ## Technical Features
 
-### Stats Management System (NEW)
+### Animation System (Updated)
+- **Simplified Animation Component**: Direct attack execution without complex buffering
+- **4 Essential Montages**: Right Slash, Left Slash, Interaction, Wondering
+- **Wondering System**: Automatic look-around animation after 5 seconds idle
+- **Animation-Driven Timing**: Attack duration matches actual animation length
+- **Configurable Speed Scale**: Compensate for blueprint animation speed issues
+
+### Stats Management System
 - Centralized configuration for all gameplay values
 - Edit stats directly in Unreal Editor without recompiling
 - Data Asset-based system for characters and weapons

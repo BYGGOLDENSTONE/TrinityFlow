@@ -5,6 +5,8 @@
 #include "Animation/AnimMontage.h"
 #include "TimerManager.h"
 #include "Engine/World.h"
+#include "GameFramework/CharacterMovementComponent.h"
+#include "../../TrinityFlowCharacter.h"
 
 UAnimationComponent::UAnimationComponent()
 {
@@ -30,141 +32,197 @@ void UAnimationComponent::TickComponent(float DeltaTime, ELevelTick TickType, FA
 {
     Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-    // Update idle animation
-    if (!bIsAnimationLocked)
+    // Update wondering timer
+    UpdateWonderingTimer();
+    
+    // Debug: Track attack montage progress
+    if (bIsAnimationLocked && CurrentLockedMontage && AnimInstance)
     {
-        UpdateIdleAnimation();
+        if (CurrentLockedMontage == LeftSlash1 || CurrentLockedMontage == RightSlash1)
+        {
+            float CurrentTime = AnimInstance->Montage_GetPosition(CurrentLockedMontage);
+            float PlayRate = AnimInstance->Montage_GetPlayRate(CurrentLockedMontage);
+            bool bIsPlaying = AnimInstance->Montage_IsPlaying(CurrentLockedMontage);
+            
+            // Log every 5 frames (roughly)
+            static float LastLogTime = 0.0f;
+            if (GetWorld()->GetTimeSeconds() - LastLogTime > 0.08f)
+            {
+                UE_LOG(LogTemp, Warning, TEXT("Montage Progress - Time: %.3f, Position: %.3f, Playing: %s"), 
+                    GetWorld()->GetTimeSeconds(), CurrentTime, bIsPlaying ? TEXT("Yes") : TEXT("No"));
+                LastLogTime = GetWorld()->GetTimeSeconds();
+            }
+        }
     }
 }
 
-bool UAnimationComponent::PlayAttackAnimation(bool bIsLeftHand)
+float UAnimationComponent::PlayAttackAnimation(bool bIsLeftHand)
 {
-    if (!CanPlayNewAnimation() || !AnimInstance)
+    if (!AnimInstance || bIsAnimationLocked)
     {
-        return false;
+        UE_LOG(LogTemp, Warning, TEXT("PlayAttackAnimation: Cannot play - AnimInstance:%s, Locked:%s"), 
+            AnimInstance ? TEXT("Valid") : TEXT("NULL"), 
+            bIsAnimationLocked ? TEXT("Yes") : TEXT("No"));
+        return 0.0f;
     }
 
-    float CurrentTime = GetWorld()->GetTimeSeconds();
-    float TimeSinceLastAttack = CurrentTime - LastAttackTime;
-    
-    // Determine which montage to play based on state and timing
-    UAnimMontage* MontageToPlay = nullptr;
-    EAttackState NewState = EAttackState::None;
-    
-    if (CurrentAttackState == EAttackState::None || CurrentAttackState == EAttackState::SecondAttack)
+    // Check if any montage is currently playing
+    if (AnimInstance->IsAnyMontagePlaying())
     {
-        // Check if this is a spam combo
-        if (TimeSinceLastAttack < SpamComboThreshold && LastAttackTime > 0)
-        {
-            MontageToPlay = bIsLeftHand ? LeftSlashCombo : RightSlashCombo;
-            NewState = EAttackState::ComboAttack;
-            UE_LOG(LogTemp, Warning, TEXT("Playing spam combo (time since last: %f)"), TimeSinceLastAttack);
-        }
-        else
-        {
-            MontageToPlay = bIsLeftHand ? LeftSlash1 : RightSlash1;
-            NewState = EAttackState::FirstAttack;
-        }
+        UAnimMontage* CurrentMontage = AnimInstance->GetCurrentActiveMontage();
+        UE_LOG(LogTemp, Warning, TEXT("PlayAttackAnimation: Another montage is playing: %s"), 
+            CurrentMontage ? *CurrentMontage->GetName() : TEXT("Unknown"));
     }
-    else if (CurrentAttackState == EAttackState::WaitingForCombo)
+
+    // Stop any wondering animation
+    StopWonderingTimer();
+    if (bIsWondering && WonderingMontage)
     {
-        // Player is in wait state, play second attack
-        MontageToPlay = bIsLeftHand ? LeftSlash2 : RightSlash2;
-        NewState = EAttackState::SecondAttack;
-        
-        // Stop the wait montage
-        if (CurrentWaitMontage && AnimInstance->Montage_IsPlaying(CurrentWaitMontage))
-        {
-            AnimInstance->Montage_Stop(0.1f, CurrentWaitMontage);
-        }
+        AnimInstance->Montage_Stop(0.2f, WonderingMontage);
+        bIsWondering = false;
     }
-    else
-    {
-        // Already in attack, can't start new one
-        return false;
-    }
+
+    // Get the appropriate montage
+    UAnimMontage* MontageToPlay = bIsLeftHand ? LeftSlash1 : RightSlash1;
     
     if (!MontageToPlay)
     {
         UE_LOG(LogTemp, Warning, TEXT("No montage available for attack"));
-        return false;
+        return 0.0f;
     }
     
-    // Stop idle animation
-    StopIdleMontage();
-    
-    // Play the attack montage
+    // Lock animation and play the attack montage
     LockAnimation(MontageToPlay);
-    float MontageLength = AnimInstance->Montage_Play(MontageToPlay, AttackMontagePlayRate);
+    
+    // Try to find the default slot name (usually "DefaultSlot")
+    FName SlotName = NAME_None;
+    if (MontageToPlay->SlotAnimTracks.Num() > 0)
+    {
+        SlotName = MontageToPlay->SlotAnimTracks[0].SlotName;
+        UE_LOG(LogTemp, Warning, TEXT("Montage slot name: %s"), *SlotName.ToString());
+    }
+    
+    // Get the montage's base play rate
+    float MontagePlayRate = MontageToPlay->RateScale;
+    UE_LOG(LogTemp, Warning, TEXT("Montage base rate scale: %.2f"), MontagePlayRate);
+    
+    // Apply the configurable speed scale
+    float CompensatedPlayRate = AttackAnimationSpeedScale;
+    
+    // If the montage has a non-standard rate scale, compensate for it
+    if (FMath::Abs(MontagePlayRate - 1.0f) > 0.01f)
+    {
+        CompensatedPlayRate = AttackAnimationSpeedScale / MontagePlayRate;
+    }
+    
+    // Ensure we're not blending out too quickly and use specific slot
+    float MontageLength = AnimInstance->Montage_Play(MontageToPlay, CompensatedPlayRate, EMontagePlayReturnType::MontageLength, 0.0f, true);
+    
+    // Force the montage to play at correct speed
+    if (MontageLength > 0.0f)
+    {
+        // Ensure position is at start
+        AnimInstance->Montage_SetPosition(MontageToPlay, 0.0f);
+        
+        // Log the actual play rate being used
+        float ActualPlayRate = AnimInstance->Montage_GetPlayRate(MontageToPlay);
+        UE_LOG(LogTemp, Warning, TEXT("Actual montage play rate after setting: %.2f"), ActualPlayRate);
+    }
     
     if (MontageLength > 0.0f)
     {
-        CurrentAttackState = NewState;
-        LastAttackTime = CurrentTime;
-        bLastAttackWasLeft = bIsLeftHand;
-        
         // Set up completion callback
         FOnMontageEnded MontageEndedDelegate;
-        MontageEndedDelegate.BindUObject(this, &UAnimationComponent::OnAttackMontageComplete);
+        MontageEndedDelegate.BindUObject(this, &UAnimationComponent::OnMontageComplete);
         AnimInstance->Montage_SetEndDelegate(MontageEndedDelegate, MontageToPlay);
         
-        UE_LOG(LogTemp, Warning, TEXT("Playing attack montage %s, State: %d"), 
-            *MontageToPlay->GetName(), (int32)NewState);
+        // Get detailed montage info
+        float CurrentPosition = AnimInstance->Montage_GetPosition(MontageToPlay);
+        float PlayRate = AnimInstance->Montage_GetPlayRate(MontageToPlay);
+        bool bIsPlaying = AnimInstance->Montage_IsPlaying(MontageToPlay);
+        int32 NumSections = MontageToPlay->GetNumSections();
         
-        return true;
+        UE_LOG(LogTemp, Warning, TEXT("Playing attack montage %s:"), *MontageToPlay->GetName());
+        UE_LOG(LogTemp, Warning, TEXT("  - Length: %.3f seconds"), MontageLength);
+        UE_LOG(LogTemp, Warning, TEXT("  - Current Position: %.3f"), CurrentPosition);
+        UE_LOG(LogTemp, Warning, TEXT("  - Play Rate: %.2f"), PlayRate);
+        UE_LOG(LogTemp, Warning, TEXT("  - Is Playing: %s"), bIsPlaying ? TEXT("Yes") : TEXT("No"));
+        UE_LOG(LogTemp, Warning, TEXT("  - Number of Sections: %d"), NumSections);
+        UE_LOG(LogTemp, Warning, TEXT("  - Start Time: %.3f"), GetWorld()->GetTimeSeconds());
+        
+        // Check for AnimNotifies that might stop the montage
+        if (MontageToPlay->Notifies.Num() > 0)
+        {
+            UE_LOG(LogTemp, Warning, TEXT("  - Montage has %d notifies"), MontageToPlay->Notifies.Num());
+            for (const FAnimNotifyEvent& Notify : MontageToPlay->Notifies)
+            {
+                UE_LOG(LogTemp, Warning, TEXT("    - Notify at time %.3f"), Notify.GetTriggerTime());
+            }
+        }
+        
+        // Log the compensated play rate we're using
+        UE_LOG(LogTemp, Warning, TEXT("  - Compensated Play Rate: %.2f (base rate: %.2f)"), CompensatedPlayRate, MontagePlayRate);
+        
+        return MontageLength;
     }
     else
     {
         UnlockAnimation();
-        return false;
+        return 0.0f;
     }
 }
 
-void UAnimationComponent::PlayIdleMontage()
+void UAnimationComponent::StartWonderingTimer()
 {
-    UAnimMontage* CurrentIdleMontage = GetCurrentIdleMontage();
-    
-    if (!CurrentIdleMontage || !AnimInstance || bIsAnimationLocked)
+    if (!bIsInCombat && !bIsAnimationLocked && !bIsWondering)
     {
-        return;
-    }
-
-    // Check if idle is already playing
-    if (!AnimInstance->Montage_IsPlaying(CurrentIdleMontage))
-    {
-        AnimInstance->Montage_Play(CurrentIdleMontage);
-
-        // Set up looping timer
-        float MontageLength = CurrentIdleMontage->GetPlayLength();
         GetWorld()->GetTimerManager().SetTimer(
-            IdleLoopTimerHandle,
+            WonderingTimerHandle,
             this,
-            &UAnimationComponent::RestartIdleAnimation,
-            MontageLength,
-            true
+            &UAnimationComponent::PlayWonderingAnimation,
+            WonderingDelay,
+            false
         );
     }
 }
 
-void UAnimationComponent::StopIdleMontage()
+void UAnimationComponent::StopWonderingTimer()
 {
-    // Stop any idle montage that might be playing
-    if (AnimInstance)
+    GetWorld()->GetTimerManager().ClearTimer(WonderingTimerHandle);
+}
+
+void UAnimationComponent::PlayWonderingAnimation()
+{
+    if (!WonderingMontage || !AnimInstance || bIsAnimationLocked || bIsInCombat)
     {
-        if (NonCombatIdleMontage && AnimInstance->Montage_IsPlaying(NonCombatIdleMontage))
-        {
-            AnimInstance->Montage_Stop(0.2f, NonCombatIdleMontage);
-        }
-        if (CombatIdleMontage && AnimInstance->Montage_IsPlaying(CombatIdleMontage))
-        {
-            AnimInstance->Montage_Stop(0.2f, CombatIdleMontage);
-        }
+        return;
     }
 
-    // Clear loop timer
-    if (GetWorld())
+    // Play wondering montage
+    float MontageLength = AnimInstance->Montage_Play(WonderingMontage, 1.0f);
+    
+    if (MontageLength > 0.0f)
     {
-        GetWorld()->GetTimerManager().ClearTimer(IdleLoopTimerHandle);
+        bIsWondering = true;
+        LockAnimation(WonderingMontage);
+        
+        // Set up completion callback
+        FOnMontageEnded MontageEndedDelegate;
+        MontageEndedDelegate.BindUObject(this, &UAnimationComponent::OnMontageComplete);
+        AnimInstance->Montage_SetEndDelegate(MontageEndedDelegate, WonderingMontage);
+        
+        UE_LOG(LogTemp, Log, TEXT("Playing wondering montage"));
+    }
+}
+
+void UAnimationComponent::UpdateWonderingTimer()
+{
+    // Start wondering timer if conditions are met
+    if (!bIsInCombat && !bIsAnimationLocked && !bIsWondering && 
+        LastMovementInput.IsNearlyZero() && 
+        !GetWorld()->GetTimerManager().IsTimerActive(WonderingTimerHandle))
+    {
+        StartWonderingTimer();
     }
 }
 
@@ -173,69 +231,22 @@ bool UAnimationComponent::CanPlayNewAnimation() const
     return !bIsAnimationLocked;
 }
 
-void UAnimationComponent::PlayWaitMontage(bool bIsLeftHand)
-{
-    if (!AnimInstance)
-    {
-        return;
-    }
-    
-    UAnimMontage* WaitMontage = bIsLeftHand ? LeftSlash1Wait : RightSlash1Wait;
-    
-    if (!WaitMontage)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("No wait montage available"));
-        CurrentAttackState = EAttackState::None;
-        UnlockAnimation();
-        return;
-    }
-    
-    // Play wait montage
-    float MontageLength = AnimInstance->Montage_Play(WaitMontage, 1.0f);
-    
-    if (MontageLength > 0.0f)
-    {
-        CurrentAttackState = EAttackState::WaitingForCombo;
-        CurrentWaitMontage = WaitMontage;
-        
-        // Set up completion callback
-        FOnMontageEnded MontageEndedDelegate;
-        MontageEndedDelegate.BindUObject(this, &UAnimationComponent::OnWaitMontageComplete);
-        AnimInstance->Montage_SetEndDelegate(MontageEndedDelegate, WaitMontage);
-        
-        UE_LOG(LogTemp, Warning, TEXT("Playing wait montage %s"), *WaitMontage->GetName());
-    }
-    else
-    {
-        CurrentAttackState = EAttackState::None;
-        UnlockAnimation();
-    }
-}
-
-void UAnimationComponent::ResetCombo()
-{
-    CurrentAttackState = EAttackState::None;
-    CurrentWaitMontage = nullptr;
-    
-    // Reset to idle if not locked
-    if (!bIsAnimationLocked)
-    {
-        PlayIdleMontage();
-    }
-}
 
 void UAnimationComponent::OnMovementInput(const FVector& MovementVector)
 {
     LastMovementInput = MovementVector;
 
-    // Cancel wait state if movement detected
-    if (CurrentAttackState == EAttackState::WaitingForCombo && bMovementCancelsCombo && MovementVector.SizeSquared() > 0.01f)
+    // Stop wondering timer and animation if player moves
+    if (MovementVector.SizeSquared() > 0.01f)
     {
-        if (CurrentWaitMontage && AnimInstance && AnimInstance->Montage_IsPlaying(CurrentWaitMontage))
+        StopWonderingTimer();
+        
+        if (bIsWondering && WonderingMontage && AnimInstance)
         {
-            AnimInstance->Montage_Stop(0.2f, CurrentWaitMontage);
+            AnimInstance->Montage_Stop(0.2f, WonderingMontage);
+            bIsWondering = false;
+            UnlockAnimation();
         }
-        ResetCombo();
     }
 }
 
@@ -246,8 +257,13 @@ bool UAnimationComponent::PlayInteractionMontage()
         return false;
     }
 
-    // Stop any idle animation
-    StopIdleMontage();
+    // Stop any wondering animation
+    StopWonderingTimer();
+    if (bIsWondering && WonderingMontage)
+    {
+        AnimInstance->Montage_Stop(0.2f, WonderingMontage);
+        bIsWondering = false;
+    }
 
     // Lock animation to prevent interruption
     LockAnimation(InteractionMontage);
@@ -259,15 +275,10 @@ bool UAnimationComponent::PlayInteractionMontage()
     {
         // Set up completion callback to unlock
         FOnMontageEnded MontageEndedDelegate;
-        MontageEndedDelegate.BindLambda([this](UAnimMontage* Montage, bool bInterrupted)
-        {
-            UnlockAnimation();
-            UE_LOG(LogTemp, Warning, TEXT("Interaction montage completed"));
-        });
+        MontageEndedDelegate.BindUObject(this, &UAnimationComponent::OnMontageComplete);
         AnimInstance->Montage_SetEndDelegate(MontageEndedDelegate, InteractionMontage);
         
-        UE_LOG(LogTemp, Warning, TEXT("Playing interaction montage %s, length %f"), 
-            *InteractionMontage->GetName(), MontageLength);
+        UE_LOG(LogTemp, Log, TEXT("Playing interaction montage %s"), *InteractionMontage->GetName());
         
         return true;
     }
@@ -282,23 +293,21 @@ void UAnimationComponent::SetCombatState(bool bInCombat)
 {
     bIsInCombat = bInCombat;
 
+    // Stop wondering if entering combat
     if (bInCombat)
     {
-        StopIdleMontage();
+        StopWonderingTimer();
+        if (bIsWondering && WonderingMontage && AnimInstance)
+        {
+            AnimInstance->Montage_Stop(0.2f, WonderingMontage);
+            bIsWondering = false;
+            UnlockAnimation();
+        }
     }
     else
     {
-        // Reset combos when leaving combat
-        ResetCombo();
-        // Start idle animation after a short delay
-        FTimerHandle DelayHandle;
-        GetWorld()->GetTimerManager().SetTimer(
-            DelayHandle,
-            this,
-            &UAnimationComponent::PlayIdleMontage,
-            0.5f,
-            false
-        );
+        // Start wondering timer when leaving combat
+        StartWonderingTimer();
     }
 }
 
@@ -314,98 +323,45 @@ void UAnimationComponent::UnlockAnimation()
     CurrentLockedMontage = nullptr;
 }
 
-bool UAnimationComponent::ShouldPlaySpamCombo()
+void UAnimationComponent::OnMontageComplete(UAnimMontage* Montage, bool bInterrupted)
 {
-    float CurrentTime = GetWorld()->GetTimeSeconds();
-    float TimeSinceLastAttack = CurrentTime - LastAttackTime;
-    return TimeSinceLastAttack < SpamComboThreshold && LastAttackTime > 0;
-}
-
-UAnimMontage* UAnimationComponent::GetAttackMontage(bool bIsLeftHand, EAttackState State)
-{
-    switch (State)
-    {
-        case EAttackState::FirstAttack:
-            return bIsLeftHand ? LeftSlash1 : RightSlash1;
-        case EAttackState::SecondAttack:
-            return bIsLeftHand ? LeftSlash2 : RightSlash2;
-        case EAttackState::ComboAttack:
-            return bIsLeftHand ? LeftSlashCombo : RightSlashCombo;
-        default:
-            return nullptr;
-    }
-}
-
-void UAnimationComponent::OnAttackMontageComplete(UAnimMontage* Montage, bool bInterrupted)
-{
-    UE_LOG(LogTemp, Warning, TEXT("Attack montage complete. State: %d, Interrupted: %s"), 
-        (int32)CurrentAttackState, bInterrupted ? TEXT("true") : TEXT("false"));
+    float EndTime = GetWorld()->GetTimeSeconds();
+    float CurrentPosition = AnimInstance ? AnimInstance->Montage_GetPosition(Montage) : -1.0f;
+    
+    UE_LOG(LogTemp, Warning, TEXT("Montage complete callback:"));
+    UE_LOG(LogTemp, Warning, TEXT("  - Montage: %s"), Montage ? *Montage->GetName() : TEXT("NULL"));
+    UE_LOG(LogTemp, Warning, TEXT("  - Interrupted: %s"), bInterrupted ? TEXT("YES") : TEXT("NO"));
+    UE_LOG(LogTemp, Warning, TEXT("  - End Time: %.3f"), EndTime);
+    UE_LOG(LogTemp, Warning, TEXT("  - Final Position: %.3f"), CurrentPosition);
     
     if (bInterrupted)
     {
-        UnlockAnimation();
-        ResetCombo();
-        return;
+        UE_LOG(LogTemp, Error, TEXT("MONTAGE WAS INTERRUPTED! Something stopped it early."));
     }
     
-    // Handle based on current state
-    switch (CurrentAttackState)
-    {
-        case EAttackState::FirstAttack:
-            // Play wait montage after first attack
-            PlayWaitMontage(bLastAttackWasLeft);
-            break;
-            
-        case EAttackState::SecondAttack:
-        case EAttackState::ComboAttack:
-            // Combo finished, return to idle
-            UnlockAnimation();
-            ResetCombo();
-            break;
-            
-        default:
-            UnlockAnimation();
-            ResetCombo();
-            break;
-    }
-}
-
-void UAnimationComponent::OnWaitMontageComplete(UAnimMontage* Montage, bool bInterrupted)
-{
-    UE_LOG(LogTemp, Warning, TEXT("Wait montage complete. Interrupted: %s"), 
-        bInterrupted ? TEXT("true") : TEXT("false"));
-    
-    CurrentWaitMontage = nullptr;
-    
-    // Unlock and reset to idle
+    // Unlock animation
     UnlockAnimation();
-    ResetCombo();
-}
-
-
-void UAnimationComponent::UpdateIdleAnimation()
-{
-    UAnimMontage* CurrentIdleMontage = GetCurrentIdleMontage();
     
-    if (!bIsAnimationLocked && CurrentIdleMontage && AnimInstance)
+    // If it was a wondering montage, clear the flag
+    if (Montage == WonderingMontage)
     {
-        // Only play if not already playing
-        if (!AnimInstance->Montage_IsPlaying(CurrentIdleMontage))
+        bIsWondering = false;
+        // Restart wondering timer
+        StartWonderingTimer();
+    }
+    
+    // Notify the character that the attack is complete if it was an attack
+    if (Montage == LeftSlash1 || Montage == RightSlash1)
+    {
+        if (ACharacter* Character = Cast<ACharacter>(GetOwner()))
         {
-            PlayIdleMontage();
+            if (ATrinityFlowCharacter* TrinityCharacter = Cast<ATrinityFlowCharacter>(Character))
+            {
+                TrinityCharacter->OnAttackComplete();
+            }
         }
     }
 }
 
-UAnimMontage* UAnimationComponent::GetCurrentIdleMontage() const
-{
-    return bIsInCombat ? CombatIdleMontage : NonCombatIdleMontage;
-}
 
-void UAnimationComponent::RestartIdleAnimation()
-{
-    if (!bIsInCombat && !bIsAnimationLocked)
-    {
-        PlayIdleMontage();
-    }
-}
+

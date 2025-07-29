@@ -57,21 +57,23 @@ void AWeaponBase::BasicAttack(AActor* Target)
     // Store the target for delayed damage
     PendingAttackTarget = Target;
 
-    // Clear any existing attack timer
-    if (GetWorld()->GetTimerManager().IsTimerActive(AttackTimerHandle))
+    // Don't clear timer if one is already active - this prevents interrupting animations
+    if (!GetWorld()->GetTimerManager().IsTimerActive(AttackTimerHandle))
     {
-        GetWorld()->GetTimerManager().ClearTimer(AttackTimerHandle);
+        // Set timer to execute the actual attack after delay
+        FTimerDelegate TimerDelegate;
+        TimerDelegate.BindUFunction(this, FName("ExecuteBasicAttack"), Target);
+        GetWorld()->GetTimerManager().SetTimer(
+            AttackTimerHandle,
+            TimerDelegate,
+            BasicAttackDamageDelay,
+            false
+        );
     }
-
-    // Set timer to execute the actual attack after delay
-    FTimerDelegate TimerDelegate;
-    TimerDelegate.BindUFunction(this, FName("ExecuteBasicAttack"), Target);
-    GetWorld()->GetTimerManager().SetTimer(
-        AttackTimerHandle,
-        TimerDelegate,
-        BasicAttackDamageDelay,
-        false
-    );
+    else
+    {
+        UE_LOG(LogTemp, Warning, TEXT("BasicAttack: Attack timer already active, not resetting"));
+    }
 
     // Draw debug for attack wind-up
     DrawDebugLine(GetWorld(), GetActorLocation(), Target->GetActorLocation(), FColor::Orange, false, BasicAttackDamageDelay, 0, 2.0f);

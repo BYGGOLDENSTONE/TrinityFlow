@@ -8,19 +8,6 @@
 class UAnimMontage;
 class UAnimInstance;
 
-UENUM(BlueprintType)
-enum class EAttackState : uint8
-{
-    None,
-    FirstAttack,
-    WaitingForCombo,
-    SecondAttack,
-    ComboAttack
-};
-
-DECLARE_DELEGATE_OneParam(FOnComboWindowStarted, int32);
-DECLARE_DELEGATE(FOnComboWindowEnded);
-
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class TRINITYFLOW_API UAnimationComponent : public UActorComponent
 {
@@ -34,13 +21,13 @@ public:
 
     // Animation Control
     UFUNCTION(BlueprintCallable, Category = "Animation")
-    bool PlayAttackAnimation(bool bIsLeftHand);
+    float PlayAttackAnimation(bool bIsLeftHand);
 
     UFUNCTION(BlueprintCallable, Category = "Animation")
-    void PlayIdleMontage();
+    void StartWonderingTimer();
 
     UFUNCTION(BlueprintCallable, Category = "Animation")
-    void StopIdleMontage();
+    void StopWonderingTimer();
 
     UFUNCTION(BlueprintPure, Category = "Animation")
     bool CanPlayNewAnimation() const;
@@ -48,14 +35,8 @@ public:
     UFUNCTION(BlueprintPure, Category = "Animation")
     bool IsAnimationLocked() const { return bIsAnimationLocked; }
 
-    UFUNCTION(BlueprintPure, Category = "Animation")
-    EAttackState GetCurrentAttackState() const { return CurrentAttackState; }
-
-    // Combo System
-    UFUNCTION(BlueprintCallable, Category = "Combo")
-    void ResetCombo();
-
-    UFUNCTION(BlueprintCallable, Category = "Combo")
+    // Movement Detection
+    UFUNCTION(BlueprintCallable, Category = "Animation")
     void OnMovementInput(const FVector& MovementVector);
 
     // Interaction
@@ -66,10 +47,6 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Combat")
     void SetCombatState(bool bInCombat);
 
-    // Events
-    FOnComboWindowStarted OnComboWindowStarted;
-    FOnComboWindowEnded OnComboWindowEnded;
-
 protected:
     // Animation State
     UPROPERTY()
@@ -78,56 +55,32 @@ protected:
     UPROPERTY()
     UAnimMontage* CurrentLockedMontage = nullptr;
 
-    // Combo System
-    UPROPERTY()
-    bool bLastAttackWasLeft = false;
-
-    // Montage Collections - All montages centralized here
-    // Right Attack Montages
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Montages|Right Attack", meta = (DisplayName = "Right Slash 1"))
+    // Montages - Only 4 essential montages
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Montages", meta = (DisplayName = "Right Slash"))
     UAnimMontage* RightSlash1 = nullptr;
 
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Montages|Right Attack", meta = (DisplayName = "Right Slash 1 Wait"))
-    UAnimMontage* RightSlash1Wait = nullptr;
-
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Montages|Right Attack", meta = (DisplayName = "Right Slash 2"))
-    UAnimMontage* RightSlash2 = nullptr;
-
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Montages|Right Attack", meta = (DisplayName = "Right Slash Combo"))
-    UAnimMontage* RightSlashCombo = nullptr;
-
-    // Left Attack Montages
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Montages|Left Attack", meta = (DisplayName = "Left Slash 1"))
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Montages", meta = (DisplayName = "Left Slash"))
     UAnimMontage* LeftSlash1 = nullptr;
 
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Montages|Left Attack", meta = (DisplayName = "Left Slash 1 Wait"))
-    UAnimMontage* LeftSlash1Wait = nullptr;
-
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Montages|Left Attack", meta = (DisplayName = "Left Slash 2"))
-    UAnimMontage* LeftSlash2 = nullptr;
-
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Montages|Left Attack", meta = (DisplayName = "Left Slash Combo"))
-    UAnimMontage* LeftSlashCombo = nullptr;
-
-    // General Montages
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Montages|General", meta = (DisplayName = "Non-Combat Idle"))
-    UAnimMontage* NonCombatIdleMontage = nullptr;
-
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Montages|General", meta = (DisplayName = "Combat Idle"))
-    UAnimMontage* CombatIdleMontage = nullptr;
-
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Montages|General", meta = (DisplayName = "Interaction"))
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Montages", meta = (DisplayName = "Interaction"))
     UAnimMontage* InteractionMontage = nullptr;
 
-    // Timing Configuration
-    UPROPERTY(EditDefaultsOnly, Category = "Timing", meta = (DisplayName = "Combo Window Duration", ClampMin = "0.1", ClampMax = "3.0"))
-    float ComboWindowDuration = 1.0f;
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Montages", meta = (DisplayName = "Wondering"))
+    UAnimMontage* WonderingMontage = nullptr;
 
-    UPROPERTY(EditDefaultsOnly, Category = "Timing", meta = (DisplayName = "Spam Combo Threshold", ClampMin = "0.1", ClampMax = "1.0"))
-    float SpamComboThreshold = 0.3f; // Time window to detect spam combo
+    // Wondering System
+    UPROPERTY(EditDefaultsOnly, Category = "Timing", meta = (DisplayName = "Wondering Delay", ClampMin = "1.0", ClampMax = "10.0"))
+    float WonderingDelay = 5.0f;
+    
+    // Attack Animation Settings
+    UPROPERTY(EditDefaultsOnly, Category = "Combat", meta = (DisplayName = "Attack Animation Speed Scale", ClampMin = "0.1", ClampMax = "2.0"))
+    float AttackAnimationSpeedScale = 1.0f;
 
-    UPROPERTY(EditDefaultsOnly, Category = "Timing", meta = (DisplayName = "Attack Montage Play Rate", ClampMin = "0.1", ClampMax = "2.0"))
-    float AttackMontagePlayRate = 1.0f;
+    UPROPERTY()
+    FTimerHandle WonderingTimerHandle;
+
+    UPROPERTY()
+    bool bIsWondering = false;
 
     // Combat State
     UPROPERTY()
@@ -136,19 +89,6 @@ protected:
     // Movement Detection
     UPROPERTY()
     FVector LastMovementInput = FVector::ZeroVector;
-
-    UPROPERTY()
-    bool bMovementCancelsCombo = true;
-
-    // Attack State Tracking
-    UPROPERTY()
-    EAttackState CurrentAttackState = EAttackState::None;
-
-    UPROPERTY()
-    float LastAttackTime = 0.0f;
-
-    UPROPERTY()
-    UAnimMontage* CurrentWaitMontage = nullptr;
 
     // Component References
     UPROPERTY()
@@ -161,21 +101,13 @@ private:
     // Internal Functions
     void LockAnimation(UAnimMontage* Montage);
     void UnlockAnimation();
-    void PlayWaitMontage(bool bIsLeftHand);
-    bool ShouldPlaySpamCombo();
-    UAnimMontage* GetAttackMontage(bool bIsLeftHand, EAttackState State);
 
     UFUNCTION()
-    void OnAttackMontageComplete(UAnimMontage* Montage, bool bInterrupted);
+    void OnMontageComplete(UAnimMontage* Montage, bool bInterrupted);
 
     UFUNCTION()
-    void OnWaitMontageComplete(UAnimMontage* Montage, bool bInterrupted);
+    void PlayWonderingAnimation();
 
-    // Idle Animation
-    void UpdateIdleAnimation();
-    FTimerHandle IdleLoopTimerHandle;
-    UAnimMontage* GetCurrentIdleMontage() const;
-
-    UFUNCTION()
-    void RestartIdleAnimation();
+    // Wondering System
+    void UpdateWonderingTimer();
 };
