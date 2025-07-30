@@ -82,6 +82,32 @@ Dynamic conditions affecting gameplay:
 | **Non-Combat** | Exploration mode | Default |
 | **Marked** | Takes echo damage | 5 seconds |
 
+### Stance System
+
+Dynamic combat modifiers based on active shard balance:
+
+| Stance | Condition | Effect | Visual |
+|--------|-----------|--------|--------|
+| **Power** | Power shards > Soul shards | +15% physical damage | Red aura |
+| **Soul** | Soul shards > Power shards | +15% soul damage | Blue aura |
+| **Balanced** | Equal or ±1 difference | +10% all damage | Purple aura |
+
+### Shard System
+
+**Collection & Activation**:
+- **Shard Types**: Soul (blue) and Power (red)
+- **States**: Inactive (collected) → Active (affects stance)
+- **Activation**: Use altars to convert inactive to active
+- **Max per Activation**: 5 shards
+
+**Altar Mechanics**:
+- **Guardian Challenges**: Defeat nearby enemies to unlock
+- **Puzzle Types**:
+  - Instant: No puzzle required
+  - Hold-to-Activate: Channel for 3 seconds
+  - Timing Challenge: Hit targets in sequence
+  - Pattern Match: Replicate shown patterns
+
 ---
 
 ## Player Character

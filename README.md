@@ -52,6 +52,16 @@ TrinityFlow is a fast-paced action game where players wield two distinct weapons
 - **Berserk**: Damage and speed boost at low HP (NEW)
 - **Ethereal**: Phase shifts with vulnerability changes (NEW)
 
+### Shard System (NEW)
+- **Collectible Shards**: Soul and Power shards scattered throughout levels
+- **Shard Activation**: Altars convert inactive shards to active ones
+- **Dynamic Stances**: Active shard balance determines combat stance
+  - Power Stance: More Power shards (+15% physical damage)
+  - Soul Stance: More Soul shards (+15% soul damage)
+  - Balanced Stance: Equal shards (+10% all damage)
+- **Guardian Challenges**: Some altars require defeating guardians
+- **Activation Puzzles**: Hold-to-activate, timing, and pattern matching
+
 ## Technical Features
 
 ### Animation System (Updated)
@@ -147,6 +157,19 @@ TrinityFlow/
 - [Changelog](CHANGELOG.md) - Detailed update history
 
 ## Recent Updates
+
+### Shard System Implementation (2025-07-30)
+- **ShardComponent**: Manages shard collection and activation
+  - Tracks active/inactive shard counts
+  - Automatic stance updates based on active shards
+- **ShardPickup Actor**: Collectible shards with floating animation
+  - Configurable respawn system for testing
+  - Blueprint events for visual effects
+- **ShardAltar Actor**: Shard activation locations
+  - Guardian enemy support
+  - Multiple puzzle types (instant, hold-to-activate, pattern matching)
+  - Progress tracking and UI events
+- **Character Integration**: ShardComponent integrated with player character
 
 ### Stance System Foundation (2025-07-30)
 - **StanceComponent**: New component for managing player combat stances
