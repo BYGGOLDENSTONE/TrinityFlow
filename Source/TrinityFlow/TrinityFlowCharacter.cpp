@@ -14,6 +14,8 @@
 #include "Core/TagComponent.h"
 #include "Core/StateComponent.h"
 #include "Core/AnimationComponent.h"
+#include "Core/StanceComponent.h"
+#include "Core/ShardComponent.h"
 #include "Core/TrinityFlowStatsSubsystem.h"
 #include "Data/TrinityFlowCharacterStats.h"
 #include "Combat/AbilityComponent.h"
@@ -81,6 +83,8 @@ ATrinityFlowCharacter::ATrinityFlowCharacter()
 	StateComponent = CreateDefaultSubobject<UStateComponent>(TEXT("StateComponent"));
 	AbilityComponent = CreateDefaultSubobject<UAbilityComponent>(TEXT("AbilityComponent"));
 	AnimationComponent = CreateDefaultSubobject<UAnimationComponent>(TEXT("AnimationComponent"));
+	StanceComponent = CreateDefaultSubobject<UStanceComponent>(TEXT("StanceComponent"));
+	ShardComponent = CreateDefaultSubobject<UShardComponent>(TEXT("ShardComponent"));
 
 	PrimaryActorTick.bCanEverTick = true;
 }
@@ -232,18 +236,64 @@ void ATrinityFlowCharacter::BeginPlay()
 	SpawnParams.Owner = this;
 	SpawnParams.Instigator = this;
 
+	// Use configurable socket names
+
 	// Spawn left katana (soul damage)
-	LeftKatana = GetWorld()->SpawnActor<AOverrideKatana>(AOverrideKatana::StaticClass(), GetActorLocation(), GetActorRotation(), SpawnParams);
-	if (LeftKatana)
+	if (LeftKatanaClass)
 	{
-		LeftKatana->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, TEXT("hand_l"));
+		LeftKatana = GetWorld()->SpawnActor<AOverrideKatana>(LeftKatanaClass, GetActorLocation(), GetActorRotation(), SpawnParams);
+		if (LeftKatana)
+		{
+			// Use SnapToTarget to maintain the socket's transform
+			FAttachmentTransformRules AttachRules(EAttachmentRule::SnapToTarget, EAttachmentRule::SnapToTarget, EAttachmentRule::SnapToTarget, true);
+			LeftKatana->AttachToComponent(GetMesh(), AttachRules, LeftHandSocketName);
+			
+			// Ensure collision is disabled
+			LeftKatana->SetActorEnableCollision(false);
+			
+			// Log attachment result
+			if (LeftKatana->GetAttachParentActor() == this)
+			{
+				UE_LOG(LogTemplateCharacter, Log, TEXT("Left katana successfully attached to socket: %s"), *LeftHandSocketName.ToString());
+			}
+			else
+			{
+				UE_LOG(LogTemplateCharacter, Warning, TEXT("Failed to attach left katana to socket: %s"), *LeftHandSocketName.ToString());
+			}
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemplateCharacter, Warning, TEXT("LeftKatanaClass not set in Blueprint! Please set it to BP_OverrideKatana"));
 	}
 
 	// Spawn right katana (physical damage)
-	RightKatana = GetWorld()->SpawnActor<APhysicalKatana>(APhysicalKatana::StaticClass(), GetActorLocation(), GetActorRotation(), SpawnParams);
-	if (RightKatana)
+	if (RightKatanaClass)
 	{
-		RightKatana->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, TEXT("hand_r"));
+		RightKatana = GetWorld()->SpawnActor<APhysicalKatana>(RightKatanaClass, GetActorLocation(), GetActorRotation(), SpawnParams);
+		if (RightKatana)
+		{
+			// Use SnapToTarget to maintain the socket's transform
+			FAttachmentTransformRules AttachRules(EAttachmentRule::SnapToTarget, EAttachmentRule::SnapToTarget, EAttachmentRule::SnapToTarget, true);
+			RightKatana->AttachToComponent(GetMesh(), AttachRules, RightHandSocketName);
+			
+			// Ensure collision is disabled
+			RightKatana->SetActorEnableCollision(false);
+			
+			// Log attachment result
+			if (RightKatana->GetAttachParentActor() == this)
+			{
+				UE_LOG(LogTemplateCharacter, Log, TEXT("Right katana successfully attached to socket: %s"), *RightHandSocketName.ToString());
+			}
+			else
+			{
+				UE_LOG(LogTemplateCharacter, Warning, TEXT("Failed to attach right katana to socket: %s"), *RightHandSocketName.ToString());
+			}
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemplateCharacter, Warning, TEXT("RightKatanaClass not set in Blueprint! Please set it to BP_PhysicalKatana"));
 	}
 	
 	// Register player's own health component for echo system (in case of self-damage or special abilities)

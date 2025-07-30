@@ -93,6 +93,12 @@ public:
 	class UTagComponent* GetTagComponent() const { return TagComponent; }
 
 	UFUNCTION()
+	class UStanceComponent* GetStanceComponent() const { return StanceComponent; }
+
+	UFUNCTION()
+	class UShardComponent* GetShardComponent() const { return ShardComponent; }
+
+	UFUNCTION()
 	AActor* GetTargetInSight();
 
 	UFUNCTION()
@@ -165,6 +171,12 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	class UAnimationComponent* AnimationComponent;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	class UStanceComponent* StanceComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	class UShardComponent* ShardComponent;
+
 	/** Weapons */
 	UPROPERTY()
 	class AOverrideKatana* LeftKatana;  // Soul damage katana
@@ -189,7 +201,20 @@ protected:
 	AActor* PendingAttacker = nullptr;
 	float PendingDamage = 0.0f;
 	EDamageType PendingDamageType = EDamageType::Physical;
-			
+	
+	/** Socket Configuration */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon Sockets")
+	FName LeftHandSocketName = TEXT("socket_weapon_l");
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon Sockets")
+	FName RightHandSocketName = TEXT("socket_weapon_r");
+	
+	/** Weapon Blueprint Classes */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon Classes")
+	TSubclassOf<class AOverrideKatana> LeftKatanaClass;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon Classes")
+	TSubclassOf<class APhysicalKatana> RightKatanaClass;
 
 protected:
 

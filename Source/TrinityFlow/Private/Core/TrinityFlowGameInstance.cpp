@@ -2,7 +2,6 @@
 #include "Core/TrinityFlowStatsSubsystem.h"
 #include "Data/TrinityFlowCharacterStats.h"
 #include "Data/TrinityFlowKatanaStats.h"
-#include "Data/TrinityFlowAnchorStats.h"
 #include "Engine/DataTable.h"
 
 UTrinityFlowGameInstance::UTrinityFlowGameInstance()

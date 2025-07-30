@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git init:*)",
+      "Bash(git add:*)",
+      "Bash(mkdir:*)",
+      "Bash(cat:*)",
+      "Bash(git push:*)",
+      "Bash(git commit:*)",
+      "Bash(ls:*)",
+      "Bash(rm:*)",
+      "Bash(dir:*)",
+      "Bash(find:*)",
+      "Bash(move TrinityFlowWeaponStats.h TrinityFlowWeaponStats.h.deprecated)",
+      "Bash(ren:*)",
+      "Bash(mv:*)",
+      "Bash(del:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(git config:*)",
+      "Bash(git fetch:*)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:api.github.com)",
+      "Bash(\"D:\\Epic Games\\UE_5.5\\Engine\\Build\\BatchFiles\\Build.bat\" TrinityFlowEditor Win64 Development -Project=\"D:\\Unreal Projects\\TrinityFlow\\TrinityFlow.uproject\" -WaitMutex -FromMsBuild)"
+    ],
+    "deny": []
+  }
+}

@@ -46,6 +46,11 @@ TrinityFlow is a fast-paced action game where players wield two distinct weapons
 - **Ghost**: Immune to physical damage
 - **Mechanical**: Immune to soul damage
 - **HaveSoul**: Can receive soul damage
+- **Duelist**: Parry and riposte abilities (NEW)
+- **Void**: Boss tag, requires alternative damage sources (NEW)
+- **Mimic**: Copies player's last used ability (NEW)
+- **Berserk**: Damage and speed boost at low HP (NEW)
+- **Ethereal**: Phase shifts with vulnerability changes (NEW)
 
 ## Technical Features
 
@@ -107,13 +112,19 @@ TrinityFlow/
    - Select "Generate Visual Studio project files"
    - Open the generated `.sln` file
 
-3. **Configure Stats System**
+3. **Configure Weapon System**
+   - Create Blueprint classes: BP_OverrideKatana and BP_PhysicalKatana
+   - Add weapon meshes to the WeaponMesh component
+   - In Character Blueprint, set weapon class references
+   - Configure socket names (default: "weapon_l" and "weapon_r")
+
+4. **Configure Stats System**
    - Create a Game Instance Blueprint
    - Set up Data Assets for characters and weapons
    - Configure the Stats Subsystem
    - See [STATS_SYSTEM_GUIDE.md](STATS_SYSTEM_GUIDE.md) for details
 
-4. **Build and Run**
+5. **Build and Run**
    - Build the project in Visual Studio
    - Run from Unreal Editor
 
@@ -136,6 +147,15 @@ TrinityFlow/
 - [Changelog](CHANGELOG.md) - Detailed update history
 
 ## Recent Updates
+
+### Stance System Foundation (2025-07-30)
+- **StanceComponent**: New component for managing player combat stances
+  - Power Stance: +15% physical damage
+  - Soul Stance: +15% soul damage (future)
+  - Balanced Stance: +10% to both damage types (future)
+- **Extended Tag System**: Added Duelist, Void, Mimic, Berserk, and Ethereal tags
+- **Weapon Blueprint Integration**: Fixed katana visibility and attachment issues
+- **Collision Fixes**: Resolved character physics glitches from weapon collisions
 
 ### Animation & Combat System Overhaul
 - **Dual-Wielding System**: Implemented left (soul damage) and right (physical damage) katana system

@@ -38,9 +38,17 @@ void APhysicalKatana::BeginPlay()
             // Cache ability stats
             PhysicalKatanaStats = &WeaponStats->PhysicalKatanaStats;
             
-            UE_LOG(LogTemp, Log, TEXT("PhysicalKatana loaded stats - Range: %.1f, Speed: %.1f"), 
-                BasicAttackRange, BasicAttackSpeed);
+            UE_LOG(LogTemp, Log, TEXT("PhysicalKatana loaded stats - Range: %.1f, Speed: %.1f, OrderWindow: %.1f"), 
+                BasicAttackRange, BasicAttackSpeed, PhysicalKatanaStats->OrderWindowDuration);
         }
+        else
+        {
+            UE_LOG(LogTemp, Warning, TEXT("PhysicalKatana: No weapon stats found in subsystem"));
+        }
+    }
+    else
+    {
+        UE_LOG(LogTemp, Warning, TEXT("PhysicalKatana: Could not get stats subsystem"));
     }
 }
 
@@ -71,11 +79,15 @@ void APhysicalKatana::AbilityR(AActor* Target)
 
 void APhysicalKatana::DefensiveAbility()
 {
-    // Order defensive ability (from Divine Anchor)
+    // Order defensive ability
     // This is called by the character when Space is pressed
     if (!bOrderWindowActive)
     {
         UE_LOG(LogTemp, Warning, TEXT("Order: No incoming attack to defend against"));
+    }
+    else
+    {
+        UE_LOG(LogTemp, Log, TEXT("Order: Defensive ability activated, window timer: %.2f"), OrderWindowTimer);
     }
 }
 
@@ -88,22 +100,46 @@ void APhysicalKatana::Tick(float DeltaTime)
     {
         OrderWindowTimer += DeltaTime;
         
-        // Visual feedback for timing window
-        if (OrderWindowTimer <= PhysicalKatanaStats->PerfectOrderStart)
+        // Check if stats are loaded
+        if (PhysicalKatanaStats)
         {
-            // Moderate window - orange
-            DrawDebugSphere(GetWorld(), GetActorLocation(), 80.0f, 12, FColor::Orange, false, 0.1f);
-        }
-        else if (OrderWindowTimer <= PhysicalKatanaStats->OrderWindowDuration)
-        {
-            // Perfect window - green
-            DrawDebugSphere(GetWorld(), GetActorLocation(), 100.0f, 12, FColor::Green, false, 0.1f);
+            // Visual feedback for timing window
+            if (OrderWindowTimer <= PhysicalKatanaStats->PerfectOrderStart)
+            {
+                // Moderate window - orange
+                DrawDebugSphere(GetWorld(), GetActorLocation(), 80.0f, 12, FColor::Orange, false, 0.1f);
+            }
+            else if (OrderWindowTimer <= PhysicalKatanaStats->OrderWindowDuration)
+            {
+                // Perfect window - green
+                DrawDebugSphere(GetWorld(), GetActorLocation(), 100.0f, 12, FColor::Green, false, 0.1f);
+            }
+            else
+            {
+                // Window expired
+                bOrderWindowActive = false;
+                OrderWindowTimer = 0.0f;
+            }
         }
         else
         {
-            // Window expired
-            bOrderWindowActive = false;
-            OrderWindowTimer = 0.0f;
+            // Use default values if stats not loaded
+            const float DefaultPerfectOrderStart = 0.75f;
+            const float DefaultOrderWindowDuration = 1.5f;
+            
+            if (OrderWindowTimer <= DefaultPerfectOrderStart)
+            {
+                DrawDebugSphere(GetWorld(), GetActorLocation(), 80.0f, 12, FColor::Orange, false, 0.1f);
+            }
+            else if (OrderWindowTimer <= DefaultOrderWindowDuration)
+            {
+                DrawDebugSphere(GetWorld(), GetActorLocation(), 100.0f, 12, FColor::Green, false, 0.1f);
+            }
+            else
+            {
+                bOrderWindowActive = false;
+                OrderWindowTimer = 0.0f;
+            }
         }
     }
 }
@@ -118,7 +154,7 @@ void APhysicalKatana::StartOrderWindow(float Damage, AActor* Attacker)
 
 bool APhysicalKatana::ProcessOrder()
 {
-    if (!bOrderWindowActive || !PhysicalKatanaStats)
+    if (!bOrderWindowActive)
     {
         return false;
     }
@@ -126,12 +162,21 @@ bool APhysicalKatana::ProcessOrder()
     bool bPerfectTiming = false;
     float DamageMultiplier = 1.0f;
     
-    if (OrderWindowTimer <= PhysicalKatanaStats->PerfectOrderStart)
+    // Use default values if stats not loaded
+    const float DefaultPerfectOrderStart = 0.75f;
+    const float DefaultOrderWindowDuration = 1.5f;
+    const float DefaultModerateOrderDamageMultiplier = 0.5f;
+    
+    float PerfectOrderStart = PhysicalKatanaStats ? PhysicalKatanaStats->PerfectOrderStart : DefaultPerfectOrderStart;
+    float OrderWindowDuration = PhysicalKatanaStats ? PhysicalKatanaStats->OrderWindowDuration : DefaultOrderWindowDuration;
+    float ModerateOrderDamageMultiplier = PhysicalKatanaStats ? PhysicalKatanaStats->ModerateOrderDamageMultiplier : DefaultModerateOrderDamageMultiplier;
+    
+    if (OrderWindowTimer <= PerfectOrderStart)
     {
         // Moderate timing - half damage
-        DamageMultiplier = PhysicalKatanaStats->ModerateOrderDamageMultiplier;
+        DamageMultiplier = ModerateOrderDamageMultiplier;
     }
-    else if (OrderWindowTimer <= PhysicalKatanaStats->OrderWindowDuration)
+    else if (OrderWindowTimer <= OrderWindowDuration)
     {
         // Perfect timing - no damage + counter
         DamageMultiplier = 0.0f;
@@ -164,12 +209,20 @@ bool APhysicalKatana::ProcessOrder()
 
 void APhysicalKatana::PerformCounterAttack(AActor* Target)
 {
-    if (!Target || !PhysicalKatanaStats) return;
+    if (!Target) 
+    {
+        UE_LOG(LogTemp, Warning, TEXT("PerformCounterAttack: No target"));
+        return;
+    }
     
     UE_LOG(LogTemp, Log, TEXT("Order Counter Attack on %s"), *Target->GetName());
     
     // Visual feedback
     DrawDebugLine(GetWorld(), GetActorLocation(), Target->GetActorLocation(), FColor::Yellow, false, 1.0f, 0, 3.0f);
+    
+    // Use default armor reduction if stats not loaded
+    const float DefaultCounterArmorReduction = 0.25f;
+    float ArmorReduction = PhysicalKatanaStats ? PhysicalKatanaStats->CounterArmorReduction : DefaultCounterArmorReduction;
     
     if (UTagComponent* TargetTags = Target->FindComponentByClass<UTagComponent>())
     {
@@ -186,7 +239,7 @@ void APhysicalKatana::PerformCounterAttack(AActor* Target)
             {
                 FCharacterResources Resources = TargetHealth->GetResources();
                 float CurrentDefense = Resources.DefencePoint;
-                float NewDefense = CurrentDefense * (1.0f - PhysicalKatanaStats->CounterArmorReduction);
+                float NewDefense = CurrentDefense * (1.0f - ArmorReduction);
                 Resources.DefencePoint = NewDefense;
                 TargetHealth->SetResources(Resources);
                 UE_LOG(LogTemp, Log, TEXT("Counter reduced %s's armor from %.1f to %.1f"), 

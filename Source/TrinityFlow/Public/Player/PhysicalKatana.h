@@ -20,7 +20,7 @@ public:
     virtual void BasicAttack(AActor* Target) override;
     virtual void AbilityE(AActor* Target) override; // First ability (TBD)
     virtual void AbilityR(AActor* Target) override; // Second ability (TBD)
-    virtual void DefensiveAbility() override; // Order (from Divine Anchor)
+    virtual void DefensiveAbility() override; // Order
 
     UFUNCTION()
     void OnPerfectOrder();
@@ -32,7 +32,7 @@ protected:
     
     const FPhysicalKatanaAbilityStats* PhysicalKatanaStats;
 
-    // Order defensive ability state (from Divine Anchor)
+    // Order defensive ability state
     UPROPERTY()
     bool bOrderWindowActive = false;
 

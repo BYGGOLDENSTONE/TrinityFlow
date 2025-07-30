@@ -2,7 +2,83 @@
 
 All notable changes to TrinityFlow are documented in this file.
 
-## [Latest] - 2025-07-29
+## [Latest] - 2025-07-30
+
+### Added
+- **Shard System Implementation**
+  - Created `UShardComponent` for managing shard collection and activation
+  - Tracks active/inactive shard counts for Soul and Power types
+  - Methods for collecting shards and activating them at altars
+  - Events for UI updates: OnShardCollected, OnShardsActivated
+  
+  - Created `AShardPickup` actor for collectible shards in the world
+  - Floating/rotating animation with configurable parameters
+  - Sphere collision for player pickup detection
+  - Optional respawn system for testing
+  - Blueprint event for collection effects
+  
+  - Created `AShardAltar` base actor for shard activation locations
+  - Configurable altar types (Soul/Power) with max activation limits
+  - Guardian enemy system - altars can require defeating enemies first
+  - Three puzzle types: None (instant), HoldToActivate, TimingChallenge, PatternMatch
+  - Interaction zone with overlap detection
+  - Blueprint events for activation states
+  
+  - Integrated ShardComponent with TrinityFlowCharacter
+  - Automatic stance updates when shard counts change
+  - Ready for UI integration
+
+## [Previous] - 2025-07-30
+
+### Added
+- **Stance System Foundation**
+  - Created `UStanceComponent` for managing player stances
+  - Added `EStanceType` enum: Soul, Power, Balanced
+  - Added `EShardType` enum: Soul, Power
+  - Implemented damage modifiers based on stance (15% for matching, 10% for balanced)
+  - Default stance set to Power for testing
+
+- **Extended Enemy Tag System**
+  - Added 5 new enemy tags to support advanced combat behaviors:
+    - Duelist: Parry and riposte abilities
+    - Void: Boss tag requiring alternative damage
+    - Mimic: Copies player abilities
+    - Berserk: Rage mode at low HP
+    - Ethereal: Phase shifting vulnerabilities
+  - Created `ECharacterTagExtended` to handle additional tags
+
+- **Weapon Attachment System**
+  - Added configurable weapon Blueprint class references to Character
+  - Implemented proper socket-based weapon attachment
+  - Added `WeaponMesh` component to `WeaponBase` for visual representation
+  - Fixed katana visibility issues
+
+### Fixed
+- **PhysicalKatana Defensive Ability Crash**
+  - Added null checks for PhysicalKatanaStats
+  - Implemented fallback values when stats not loaded
+  - Fixed Order ability timing window calculations
+
+- **Weapon Collision Issues**
+  - Disabled all collision on weapon meshes
+  - Fixed character teleporting/glitching during animations
+  - Weapons no longer interfere with character physics
+
+- **Blueprint Integration**
+  - Character now spawns Blueprint weapon classes instead of base C++ classes
+  - Socket names are now configurable in Character Blueprint
+  - Proper mesh component hierarchy for weapon visuals
+
+### Changed
+- **Build System**
+  - Fixed ECharacterTag enum to use uint8 (split into two enums for Blueprint compatibility)
+
+### Technical Details
+- StanceComponent provides `GetDamageModifier()` for combat calculations
+- Weapon spawning now uses `TSubclassOf<>` for Blueprint class references
+- Socket attachment uses configurable FName properties
+
+## [2025-07-29]
 
 ### Removed
 - **Chapter System**: Removed entire chapter/level streaming system due to editor crashes

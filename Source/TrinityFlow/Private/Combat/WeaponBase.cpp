@@ -1,6 +1,7 @@
 #include "Combat/WeaponBase.h"
 #include "Core/HealthComponent.h"
 #include "Components/SceneComponent.h"
+#include "Components/StaticMeshComponent.h"
 #include "GameFramework/Pawn.h"
 #include "DrawDebugHelpers.h"
 #include "Engine/World.h"
@@ -12,6 +13,16 @@ AWeaponBase::AWeaponBase()
 
     Root = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
     SetRootComponent(Root);
+    
+    WeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("WeaponMesh"));
+    WeaponMesh->SetupAttachment(Root);
+    
+    // Disable all collision to prevent glitches
+    WeaponMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    WeaponMesh->SetCollisionResponseToAllChannels(ECR_Ignore);
+    WeaponMesh->SetGenerateOverlapEvents(false);
+    WeaponMesh->CanCharacterStepUpOn = ECB_No;
+    WeaponMesh->SetCanEverAffectNavigation(false);
 }
 
 void AWeaponBase::BeginPlay()

@@ -53,6 +53,9 @@ public:
 protected:
     UPROPERTY()
     class USceneComponent* Root;
+    
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+    class UStaticMeshComponent* WeaponMesh;
 
     UPROPERTY()
     float BasicAttackRange = 300.0f;
