@@ -76,3 +76,19 @@ DerivedDataCache/*
 # Ignore nul files
 nul
 *.nul
+
+# Content folder (large binary assets)
+Content/
+
+# IDE files
+.idea/
+*.user
+
+# Config folder (optional - contains project settings)
+# Config/
+
+# VS Code
+.vscode/
+
+# Claude
+.claude/
