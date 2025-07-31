@@ -59,6 +59,10 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Guardians")
     bool bRequireGuardiansDefeated = true;
 
+    // Interaction Zone Configuration
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction Zone")
+    FVector InteractionZoneSize = FVector(200.0f, 200.0f, 100.0f);
+
     // Components
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
     UStaticMeshComponent* AltarMesh;

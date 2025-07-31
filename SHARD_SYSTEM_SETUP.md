@@ -37,8 +37,16 @@ The shard system allows players to collect shards and selectively activate them 
      - Min Shards To Activate: 1
      - Puzzle Type: `HoldToActivate` (2 seconds)
    - Set up altar mesh (pedestal, shrine, etc.)
+   - Adjust mesh position relative to interaction zone if needed
    
-3. The altar now accepts both Soul and Power shards in a single interaction
+3. Component Structure:
+   - InteractionZone (Root) - Scales with actor
+   - AltarMesh (Child) - Scales proportionally
+   
+4. Scaling:
+   - Use actor scale to resize entire altar
+   - Both mesh and interaction zone scale together
+   - Fine-tune with InteractionZoneSize property if needed
 
 ### 3. Place in Level
 

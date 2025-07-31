@@ -18,6 +18,7 @@ All notable changes to TrinityFlow are documented in this file.
   - Removed separate altar types - all altars are universal
   - Added `StartSelectiveActivation()` method for specific shard counts
   - Simplified altar interaction from auto-activation to UI-based selection
+  - Restructured component hierarchy - InteractionZone is now root for proper scaling
 
 - **HUD System Updates**
   - Added player info section showing stance and shard counts
@@ -39,10 +40,17 @@ All notable changes to TrinityFlow are documented in this file.
   - Movement and camera controls properly disabled during UI interaction
   - UI-specific inputs work without affecting gameplay
 
+- **Altar Scaling**
+  - Fixed hardcoded interaction zone size
+  - Component hierarchy now matches shard pickup structure
+  - Actor scale now properly affects both mesh and interaction zone
+  - Added editable InteractionZoneSize property for fine-tuning
+
 ### Technical Details
 - All UI implemented in C++ (no Blueprint widgets required)
 - Selective activation allows strategic stance management
 - Players can save shards for future use at other altars
+- Consistent component structure between pickups and altars
 
 ## [Previous] - 2025-07-30
 

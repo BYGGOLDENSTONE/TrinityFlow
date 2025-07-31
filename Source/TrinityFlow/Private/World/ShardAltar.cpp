@@ -9,25 +9,29 @@ AShardAltar::AShardAltar()
 {
     PrimaryActorTick.bCanEverTick = true;
 
-    // Create altar mesh
-    AltarMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("AltarMesh"));
-    RootComponent = AltarMesh;
-    AltarMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-    AltarMesh->SetCollisionResponseToChannel(ECC_Pawn, ECR_Block);
-
-    // Create interaction zone
+    // Create interaction zone as root (like collision sphere in pickup)
     InteractionZone = CreateDefaultSubobject<UBoxComponent>(TEXT("InteractionZone"));
-    InteractionZone->SetupAttachment(RootComponent);
-    InteractionZone->SetBoxExtent(FVector(200.0f, 200.0f, 100.0f));
-    InteractionZone->SetRelativeLocation(FVector(0.0f, 0.0f, 100.0f));
+    RootComponent = InteractionZone;
     InteractionZone->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
     InteractionZone->SetCollisionResponseToAllChannels(ECR_Ignore);
     InteractionZone->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
+    
+    // Create altar mesh as child of interaction zone
+    AltarMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("AltarMesh"));
+    AltarMesh->SetupAttachment(RootComponent);
+    AltarMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+    AltarMesh->SetCollisionResponseToChannel(ECC_Pawn, ECR_Block);
 }
 
 void AShardAltar::BeginPlay()
 {
     Super::BeginPlay();
+    
+    // Apply interaction zone size from editable properties
+    if (InteractionZone)
+    {
+        InteractionZone->SetBoxExtent(InteractionZoneSize);
+    }
     
     // Bind overlap events
     InteractionZone->OnComponentBeginOverlap.AddDynamic(this, &AShardAltar::OnOverlapBegin);
