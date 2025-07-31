@@ -40,6 +40,13 @@ TrinityFlow is a fast-paced action game where players wield two distinct weapons
 - **Navigation Integration**: Full NavMesh pathfinding with CharacterMovementComponent
 - **Configurable Parameters**: Sight range, attack range, movement speed via data assets
 
+### Enemy Animation System
+- **Hit Response Differentiation**: Separate animations for left (soul) and right (physical) weapon hits
+- **Attack Animations**: Synchronized with AI attack timing (1.5 second cast)
+- **Parry Response**: Special animation when player perfectly parries enemy attacks
+- **Modular Component**: EnemyAnimationComponent manages all combat animations
+- **Blueprint Integration**: Easy montage assignment through enemy Blueprints
+
 ### Tag System
 - **Shielded**: Blocks frontal physical damage
 - **Armored**: Reduces physical damage by defense percentage

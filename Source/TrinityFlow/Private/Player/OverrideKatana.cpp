@@ -14,6 +14,7 @@ AOverrideKatana::AOverrideKatana()
     BasicAttackRange = 300.0f;
     BasicAttackSpeed = 1.0f;
     BasicDamageType = EDamageType::Soul;  // Soul damage for left katana
+    bIsLeftHandWeapon = true;  // This is the left hand weapon
     
     AbilityQCooldown = 6.0f; // Code Break (was E)
     AbilityECooldown = 5.0f; // Will be used for Tab ability (Echoes)

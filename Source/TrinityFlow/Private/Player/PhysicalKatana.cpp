@@ -14,6 +14,7 @@ APhysicalKatana::APhysicalKatana()
     BasicAttackRange = 300.0f;
     BasicAttackSpeed = 1.0f;
     BasicDamageType = EDamageType::Physical;  // Physical damage for right katana
+    bIsLeftHandWeapon = false;  // This is the right hand weapon
     AbilityECooldown = 6.0f;  // Placeholder cooldowns
 }
 

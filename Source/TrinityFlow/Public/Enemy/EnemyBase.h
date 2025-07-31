@@ -32,6 +32,9 @@ protected:
     UPROPERTY(EditDefaultsOnly, Category = "Components")
     class UAIStateMachine* AIStateMachine;
 
+    UPROPERTY(EditDefaultsOnly, Category = "Components")
+    class UEnemyAnimationComponent* AnimationComponent;
+
     // Stats Configuration
     UPROPERTY(EditDefaultsOnly, Category = "Stats")
     FName EnemyStatsID = "StandardEnemy";

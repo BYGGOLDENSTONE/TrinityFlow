@@ -710,6 +710,71 @@ Configure these in the character stats data assets.
 
 ---
 
+## Enemy Animation System
+
+### Overview
+The enemy animation system provides visual feedback for all combat interactions, differentiating between damage sources and defensive outcomes.
+
+### Core Components
+
+#### EnemyAnimationComponent
+- Manages all enemy combat animations
+- Automatically added to all enemies through EnemyBase
+- Handles animation priorities and interruptions
+- Blueprint-configurable montages
+
+### Animation Types
+
+#### 1. Hit Response Animations
+- **Left Hit Response**: Plays when hit by left weapon (soul damage)
+- **Right Hit Response**: Plays when hit by right weapon (physical damage)
+- Differentiated by weapon source, not just damage type
+- Automatically interrupts other animations
+
+#### 2. Attack Animation
+- Synchronized with AI attack state
+- Plays during 1.5 second attack cast time
+- Visual indicator of incoming damage
+
+#### 3. Parry Response Animation
+- Triggered when player achieves perfect defense
+- Special stagger animation showing failed attack
+- Longer duration for dramatic effect
+
+### Setup Instructions
+
+#### 1. Create Animation Montages
+```
+For each enemy skeletal mesh:
+1. Create 4 animation montages:
+   - LeftHitResponseMontage (soul damage reaction)
+   - RightHitResponseMontage (physical damage reaction)
+   - AttackMontage (attack wind-up and strike)
+   - ParryResponseMontage (stagger from perfect parry)
+```
+
+#### 2. Configure Enemy Blueprints
+```
+1. Open enemy Blueprint (BP_StandardEnemy, etc.)
+2. Select AnimationComponent in Components panel
+3. In Details panel, assign all 4 montages
+4. Compile and save
+```
+
+### Animation Guidelines
+- **Hit Responses**: 0.3-0.5 seconds, directional stagger
+- **Attack**: Match 1.5 second cast time, clear wind-up
+- **Parry Response**: 1-2 seconds, dramatic recoil
+- **Visual Effects**: Blue for soul damage, orange for physical
+
+### Technical Features
+- Weapon hand detection (left vs right)
+- Automatic animation blending
+- Priority system prevents animation conflicts
+- Full Blueprint integration
+
+---
+
 ## Current Project Status (2025-07-29)
 
 ### What's Implemented

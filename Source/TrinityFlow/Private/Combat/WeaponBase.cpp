@@ -149,11 +149,13 @@ void AWeaponBase::ExecuteBasicAttack(AActor* Target)
         
         DamageInfo.Type = BasicDamageType;
         DamageInfo.Instigator = OwnerPawn;
+        DamageInfo.bIsLeftWeapon = bIsLeftHandWeapon;
         
-        UE_LOG(LogTemp, Warning, TEXT("WeaponBase ExecuteBasicAttack: Instigator=%s, Target=%s, Damage=%.1f"), 
+        UE_LOG(LogTemp, Warning, TEXT("WeaponBase ExecuteBasicAttack: Instigator=%s, Target=%s, Damage=%.1f, IsLeftWeapon=%s"), 
             OwnerPawn ? *OwnerPawn->GetName() : TEXT("NULL"),
             Target ? *Target->GetName() : TEXT("NULL"),
-            DamageInfo.Amount);
+            DamageInfo.Amount,
+            bIsLeftHandWeapon ? TEXT("Yes") : TEXT("No"));
 
         FVector DamageDirection = (Target->GetActorLocation() - GetActorLocation()).GetSafeNormal();
         TargetHealth->TakeDamage(DamageInfo, DamageDirection);

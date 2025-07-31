@@ -2,7 +2,37 @@
 
 All notable changes to TrinityFlow are documented in this file.
 
-## [Latest] - 2025-07-31
+## [Latest] - 2025-08-01
+
+### Added
+- **Enemy Animation System**
+  - Created `EnemyAnimationComponent` for managing all enemy combat animations
+  - Separate hit response animations for left and right weapon attacks
+  - Attack animation that plays when enemies initiate attacks
+  - Parry response animation when player achieves perfect defense
+  - Animation differentiation based on damage type (soul vs physical)
+  
+- **Enhanced Damage Information**
+  - Extended `FDamageInfo` struct with `bIsLeftWeapon` flag
+  - Weapons now identify themselves as left or right hand
+  - Damage system passes weapon hand information for appropriate animations
+
+### Changed
+- **AI Attack State**
+  - Integrated attack animations with AI state machine
+  - Attack animations now play before damage is dealt
+  
+- **Defensive System Integration**
+  - Perfect parries now trigger enemy parry response animation
+  - Enhanced visual feedback for combat interactions
+
+### Technical Details
+- All enemy animations are managed through a modular component system
+- Animations automatically interrupt each other when needed
+- System works without animations but logs warnings for missing montages
+- Full Blueprint integration for easy animation setup
+
+## [Previous] - 2025-07-31
 
 ### Added
 - **Unified Defensive System**

@@ -100,8 +100,11 @@ struct FDamageInfo
     UPROPERTY()
     bool bIsAreaDamage = false;
 
+    UPROPERTY()
+    bool bIsLeftWeapon = false;
+
     FDamageInfo() {}
     
-    FDamageInfo(float InAmount, EDamageType InType, AActor* InInstigator = nullptr, bool bInIsAreaDamage = false)
-        : Amount(InAmount), Type(InType), Instigator(InInstigator), bIsAreaDamage(bInIsAreaDamage) {}
+    FDamageInfo(float InAmount, EDamageType InType, AActor* InInstigator = nullptr, bool bInIsAreaDamage = false, bool bInIsLeftWeapon = false)
+        : Amount(InAmount), Type(InType), Instigator(InInstigator), bIsAreaDamage(bInIsAreaDamage), bIsLeftWeapon(bInIsLeftWeapon) {}
 };

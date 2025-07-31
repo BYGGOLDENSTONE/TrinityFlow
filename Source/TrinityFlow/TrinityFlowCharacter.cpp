@@ -23,6 +23,7 @@
 #include "Player/OverrideKatana.h"
 #include "Player/PhysicalKatana.h"
 #include "Enemy/EnemyBase.h"
+#include "Enemy/EnemyAnimationComponent.h"
 #include "DrawDebugHelpers.h"
 #include "Engine/World.h"
 #include "Kismet/GameplayStatics.h"
@@ -669,6 +670,15 @@ void ATrinityFlowCharacter::RightDefensiveAbility()
 				// Show defense result text above the attacker
 				FString DefenseResult = bIsPerfect ? TEXT("PERFECT DEFENSE!") : TEXT("BLOCKED!");
 				FLinearColor TextColor = bIsPerfect ? FLinearColor::Green : FLinearColor::Yellow;
+				
+				// If perfect defense, trigger enemy parry response animation
+				if (bIsPerfect && PendingAttacker)
+				{
+					if (UEnemyAnimationComponent* EnemyAnimComp = PendingAttacker->FindComponentByClass<UEnemyAnimationComponent>())
+					{
+						EnemyAnimComp->PlayParryResponse();
+					}
+				}
 				
 				// Get HUD and add floating text above attacker
 				if (PendingAttacker)

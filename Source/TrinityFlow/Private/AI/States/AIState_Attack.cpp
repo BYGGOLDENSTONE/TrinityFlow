@@ -4,6 +4,7 @@
 #include "Core/CombatComponent.h"
 #include "Core/StateComponent.h"
 #include "Core/TrinityFlowTypes.h"
+#include "Enemy/EnemyAnimationComponent.h"
 #include "DrawDebugHelpers.h"
 
 UAIState_Attack::UAIState_Attack()
@@ -99,6 +100,12 @@ void UAIState_Attack::PerformAttack()
 	if (!CachedEnemy)
 	{
 		return;
+	}
+
+	// Play attack animation
+	if (UEnemyAnimationComponent* AnimComp = CachedEnemy->FindComponentByClass<UEnemyAnimationComponent>())
+	{
+		AnimComp->PlayAttackAnimation();
 	}
 
 	UCombatComponent* CombatComp = CachedEnemy->GetCombatComponent();

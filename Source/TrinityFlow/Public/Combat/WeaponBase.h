@@ -94,5 +94,9 @@ protected:
     UPROPERTY()
     AActor* PendingAttackTarget;
 
+    // Weapon hand indicator
+    UPROPERTY(EditDefaultsOnly, Category = "Weapon")
+    bool bIsLeftHandWeapon = false;
+
     void StartCooldown(float& Timer, float Cooldown);
 };

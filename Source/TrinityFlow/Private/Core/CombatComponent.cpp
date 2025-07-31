@@ -126,6 +126,7 @@ void UCombatComponent::ExecuteAttack()
     DamageInfo.Type = PendingDamageType;
     DamageInfo.Instigator = GetOwner();
     DamageInfo.bIsAreaDamage = bPendingAreaDamage;
+    DamageInfo.bIsLeftWeapon = false; // Enemies use right hand by default
 
     if (bPendingAreaDamage)
     {

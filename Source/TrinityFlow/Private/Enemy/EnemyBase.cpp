@@ -13,6 +13,7 @@
 #include "AI/AIStateMachine.h"
 #include "AI/EnemyAIController.h"
 #include "AI/AIState.h"
+#include "Enemy/EnemyAnimationComponent.h"
 #include "DrawDebugHelpers.h"
 #include "Engine/World.h"
 #include "Kismet/GameplayStatics.h"
@@ -49,6 +50,7 @@ AEnemyBase::AEnemyBase()
     
     // AI Components
     AIStateMachine = CreateDefaultSubobject<UAIStateMachine>(TEXT("AIStateMachine"));
+    AnimationComponent = CreateDefaultSubobject<UEnemyAnimationComponent>(TEXT("AnimationComponent"));
     
     // Set AI Controller class
     AIControllerClass = AEnemyAIController::StaticClass();

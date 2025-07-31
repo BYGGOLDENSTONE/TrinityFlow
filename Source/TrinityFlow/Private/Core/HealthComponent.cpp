@@ -2,6 +2,7 @@
 #include "Core/DamageCalculator.h"
 #include "Core/TagComponent.h"
 #include "Core/AnimationComponent.h"
+#include "Enemy/EnemyAnimationComponent.h"
 #include "GameFramework/Actor.h"
 
 UHealthComponent::UHealthComponent()
@@ -40,9 +41,15 @@ void UHealthComponent::TakeDamage(const FDamageInfo& DamageInfo, const FVector& 
         // Play hit response animation
         if (AActor* Owner = GetOwner())
         {
+            // Check for player animation component
             if (UAnimationComponent* AnimComp = Owner->FindComponentByClass<UAnimationComponent>())
             {
                 AnimComp->PlayHitResponse();
+            }
+            // Check for enemy animation component
+            else if (UEnemyAnimationComponent* EnemyAnimComp = Owner->FindComponentByClass<UEnemyAnimationComponent>())
+            {
+                EnemyAnimComp->PlayHitResponse(DamageInfo.Type, DamageInfo.bIsLeftWeapon);
             }
         }
         
