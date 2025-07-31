@@ -25,6 +25,12 @@ void AOverrideKatana::BeginPlay()
 {
     Super::BeginPlay();
     
+    // Don't try to load stats in editor/simulate mode
+    if (!GetWorld() || !GetWorld()->IsGameWorld())
+    {
+        return;
+    }
+    
     // Get stats from subsystem
     if (UGameInstance* GameInstance = GetGameInstance())
     {

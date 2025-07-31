@@ -21,8 +21,16 @@ void APhysicalKatana::BeginPlay()
 {
     Super::BeginPlay();
     
+    // Don't try to load stats in editor/simulate mode
+    if (!GetWorld() || !GetWorld()->IsGameWorld())
+    {
+        return;
+    }
+    
     // Load weapon stats from subsystem
-    if (UTrinityFlowStatsSubsystem* StatsSubsystem = GetGameInstance()->GetSubsystem<UTrinityFlowStatsSubsystem>())
+    if (GetGameInstance())
+    {
+        if (UTrinityFlowStatsSubsystem* StatsSubsystem = GetGameInstance()->GetSubsystem<UTrinityFlowStatsSubsystem>())
     {
         WeaponStats = StatsSubsystem->GetPhysicalKatanaStats();
         
@@ -45,10 +53,7 @@ void APhysicalKatana::BeginPlay()
         {
             UE_LOG(LogTemp, Warning, TEXT("PhysicalKatana: No weapon stats found in subsystem"));
         }
-    }
-    else
-    {
-        UE_LOG(LogTemp, Warning, TEXT("PhysicalKatana: Could not get stats subsystem"));
+        }
     }
 }
 

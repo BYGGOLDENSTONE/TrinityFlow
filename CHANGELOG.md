@@ -5,6 +5,41 @@ All notable changes to TrinityFlow are documented in this file.
 ## [Latest] - 2025-07-31
 
 ### Added
+- **C++ Weapon Spawning System**
+  - Automatic weapon spawning in BeginPlay
+  - Socket attachment support with customizable names
+  - Blueprint-assignable weapon classes
+  - Safety checks for editor modes (prevents Simulate crashes)
+  - Debug logging for troubleshooting
+
+- **Comprehensive Documentation**
+  - Created COMBAT_SYSTEM_SETUP.md - Complete combat setup guide
+  - Includes weapon, animation, input, and stats configuration
+  - Step-by-step troubleshooting section
+  - Consolidated weapon and animation guides
+
+### Changed
+- **Socket System**
+  - Default socket names changed to WeaponSocket_L/R
+  - Clear separation from hardcoded weapon bones
+  - Supports flexible weapon swapping system
+
+### Fixed
+- **Editor Crash in Simulate Mode**
+  - Added null checks for GameInstance
+  - Skip weapon spawning in non-game worlds
+  - Weapons only spawn during actual gameplay
+
+### Documentation
+- Deleted outdated files:
+  - NEXT_SESSION_NOTES.md (already implemented)
+  - ANIMATION_SETUP.md (merged into combat guide)
+  - WEAPON_BLUEPRINT_SETUP.md (merged into combat guide)
+- Updated README with current documentation structure
+
+## [Previous] - 2025-07-31
+
+### Added
 - **Interactive Shard Activation UI**
   - Full-screen HUD panel for selective shard activation
   - Players can choose exactly how many shards of each type to activate

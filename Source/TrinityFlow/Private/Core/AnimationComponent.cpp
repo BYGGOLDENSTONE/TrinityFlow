@@ -40,8 +40,17 @@ void UAnimationComponent::TickComponent(float DeltaTime, ELevelTick TickType, FA
 
 float UAnimationComponent::PlayAttackAnimation(bool bIsLeftHand)
 {
-    if (!AnimInstance || bIsAnimationLocked)
+    UE_LOG(LogTemp, Warning, TEXT("PlayAttackAnimation called - bIsLeftHand: %s"), bIsLeftHand ? TEXT("true") : TEXT("false"));
+    
+    if (!AnimInstance)
     {
+        UE_LOG(LogTemp, Warning, TEXT("No AnimInstance found!"));
+        return 0.0f;
+    }
+    
+    if (bIsAnimationLocked)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Animation is locked!"));
         return 0.0f;
     }
 
@@ -58,6 +67,8 @@ float UAnimationComponent::PlayAttackAnimation(bool bIsLeftHand)
     
     if (!MontageToPlay)
     {
+        UE_LOG(LogTemp, Error, TEXT("No montage found! %s is null. Make sure to set the montages in the Character Blueprint!"), 
+            bIsLeftHand ? TEXT("LeftSlash1") : TEXT("RightSlash1"));
         return 0.0f;
     }
     

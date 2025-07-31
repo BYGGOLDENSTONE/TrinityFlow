@@ -245,7 +245,8 @@ void ATrinityFlowCharacter::BeginPlay()
 		}
 	}
 
-	// Weapons will be spawned and attached via Blueprint
+	// Spawn weapons
+	SpawnWeapons();
 	
 	// Register player's own health component for echo system (in case of self-damage or special abilities)
 	if (HealthComponent)
@@ -321,54 +322,112 @@ void ATrinityFlowCharacter::Tick(float DeltaTime)
 
 void ATrinityFlowCharacter::LeftKatanaAttack()
 {
+	UE_LOG(LogTemplateCharacter, Warning, TEXT("=== LeftKatanaAttack Called ==="));
+	
 	if (IsUIBlockingInput())
 	{
+		UE_LOG(LogTemplateCharacter, Warning, TEXT("Attack blocked by UI"));
 		return;
 	}
 	
-	if (AnimationComponent && !bIsAttacking && LeftKatana)
+	if (!LeftKatana)
 	{
-		// Play attack animation and get montage length
-		float MontageLength = AnimationComponent->PlayAttackAnimation(true);
-		if (MontageLength > 0.0f)
-		{
-			// Animation started, execute the attack
-			bIsAttacking = true;
-			CurrentAttackingWeapon = LeftKatana;
-			AttackEndTime = GetWorld()->GetTimeSeconds() + MontageLength;
-			
-			AActor* Target = GetTargetInSight();
-			LeftKatana->BasicAttack(Target);
-			
-			UE_LOG(LogTemplateCharacter, Log, TEXT("Executing left katana attack, duration: %.2f"), MontageLength);
-		}
+		UE_LOG(LogTemplateCharacter, Error, TEXT("No LeftKatana weapon found!"));
+		return;
 	}
+	
+	if (bIsAttacking)
+	{
+		UE_LOG(LogTemplateCharacter, Warning, TEXT("Already attacking"));
+		return;
+	}
+	
+	// Try to play animation if component exists
+	float MontageLength = 0.0f;
+	if (AnimationComponent)
+	{
+		MontageLength = AnimationComponent->PlayAttackAnimation(true);
+		UE_LOG(LogTemplateCharacter, Warning, TEXT("Animation montage length: %.2f"), MontageLength);
+	}
+	else
+	{
+		UE_LOG(LogTemplateCharacter, Warning, TEXT("No AnimationComponent found - attacking without animation"));
+	}
+	
+	// If no animation or animation failed, use default duration
+	if (MontageLength <= 0.0f)
+	{
+		MontageLength = 0.5f; // Default attack duration
+		UE_LOG(LogTemplateCharacter, Warning, TEXT("Using default attack duration: %.2f"), MontageLength);
+	}
+	
+	// Execute attack regardless of animation
+	bIsAttacking = true;
+	CurrentAttackingWeapon = LeftKatana;
+	AttackEndTime = GetWorld()->GetTimeSeconds() + MontageLength;
+	
+	AActor* Target = GetTargetInSight();
+	LeftKatana->BasicAttack(Target);
+	
+	// Set timer to reset attack state
+	GetWorld()->GetTimerManager().SetTimer(AttackResetTimer, this, &ATrinityFlowCharacter::OnAttackComplete, MontageLength, false);
+	
+	UE_LOG(LogTemplateCharacter, Warning, TEXT("Left katana attack executed! Target: %s"), Target ? *Target->GetName() : TEXT("None"));
 }
 
 void ATrinityFlowCharacter::RightKatanaAttack()
 {
+	UE_LOG(LogTemplateCharacter, Warning, TEXT("=== RightKatanaAttack Called ==="));
+	
 	if (IsUIBlockingInput())
 	{
+		UE_LOG(LogTemplateCharacter, Warning, TEXT("Attack blocked by UI"));
 		return;
 	}
 	
-	if (AnimationComponent && !bIsAttacking && RightKatana)
+	if (!RightKatana)
 	{
-		// Play attack animation and get montage length
-		float MontageLength = AnimationComponent->PlayAttackAnimation(false);
-		if (MontageLength > 0.0f)
-		{
-			// Animation started, execute the attack
-			bIsAttacking = true;
-			CurrentAttackingWeapon = RightKatana;
-			AttackEndTime = GetWorld()->GetTimeSeconds() + MontageLength;
-			
-			AActor* Target = GetTargetInSight();
-			RightKatana->BasicAttack(Target);
-			
-			UE_LOG(LogTemplateCharacter, Log, TEXT("Executing right katana attack, duration: %.2f"), MontageLength);
-		}
+		UE_LOG(LogTemplateCharacter, Error, TEXT("No RightKatana weapon found!"));
+		return;
 	}
+	
+	if (bIsAttacking)
+	{
+		UE_LOG(LogTemplateCharacter, Warning, TEXT("Already attacking"));
+		return;
+	}
+	
+	// Try to play animation if component exists
+	float MontageLength = 0.0f;
+	if (AnimationComponent)
+	{
+		MontageLength = AnimationComponent->PlayAttackAnimation(false);
+		UE_LOG(LogTemplateCharacter, Warning, TEXT("Animation montage length: %.2f"), MontageLength);
+	}
+	else
+	{
+		UE_LOG(LogTemplateCharacter, Warning, TEXT("No AnimationComponent found - attacking without animation"));
+	}
+	
+	// If no animation or animation failed, use default duration
+	if (MontageLength <= 0.0f)
+	{
+		MontageLength = 0.5f; // Default attack duration
+		UE_LOG(LogTemplateCharacter, Warning, TEXT("Using default attack duration: %.2f"), MontageLength);
+	}
+	
+	// Execute attack regardless of animation
+	bIsAttacking = true;
+	CurrentAttackingWeapon = RightKatana;
+	AttackEndTime = GetWorld()->GetTimeSeconds() + MontageLength;
+	
+	AActor* Target = GetTargetInSight();
+	RightKatana->BasicAttack(Target);
+	
+	// Set timer to reset attack state
+	GetWorld()->GetTimerManager().SetTimer(AttackResetTimer, this, &ATrinityFlowCharacter::OnAttackComplete, MontageLength, false);
+	
+	UE_LOG(LogTemplateCharacter, Warning, TEXT("Right katana attack executed! Target: %s"), Target ? *Target->GetName() : TEXT("None"));
 }
 
 void ATrinityFlowCharacter::OnAttackComplete()
@@ -693,3 +752,70 @@ bool ATrinityFlowCharacter::IsUIBlockingInput() const
 }
 
 // Removed unused altar interaction methods - now handled directly in AbilityE()
+
+void ATrinityFlowCharacter::SpawnWeapons()
+{
+	// Don't spawn weapons in editor preview/simulate modes
+	if (!GetWorld() || !GetWorld()->IsGameWorld())
+	{
+		UE_LOG(LogTemplateCharacter, Warning, TEXT("SpawnWeapons: Not in game world, skipping weapon spawn"));
+		return;
+	}
+	
+	// Check if game instance exists (it won't in simulate mode)
+	if (!GetGameInstance())
+	{
+		UE_LOG(LogTemplateCharacter, Warning, TEXT("SpawnWeapons: No game instance, skipping weapon spawn"));
+		return;
+	}
+	
+	// Spawn left katana (soul damage)
+	if (LeftKatanaClass)
+	{
+		FActorSpawnParameters SpawnParams;
+		SpawnParams.Owner = this;
+		SpawnParams.Instigator = this;
+		
+		LeftKatana = GetWorld()->SpawnActor<AOverrideKatana>(LeftKatanaClass, FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
+		
+		if (LeftKatana)
+		{
+			// Attach to left hand socket
+			LeftKatana->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, LeftHandSocketName);
+			UE_LOG(LogTemplateCharacter, Log, TEXT("Spawned and attached LeftKatana to socket: %s"), *LeftHandSocketName.ToString());
+		}
+		else
+		{
+			UE_LOG(LogTemplateCharacter, Error, TEXT("Failed to spawn LeftKatana from class"));
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemplateCharacter, Warning, TEXT("LeftKatanaClass not set - weapon will not spawn. Set it in Blueprint!"));
+	}
+	
+	// Spawn right katana (physical damage)
+	if (RightKatanaClass)
+	{
+		FActorSpawnParameters SpawnParams;
+		SpawnParams.Owner = this;
+		SpawnParams.Instigator = this;
+		
+		RightKatana = GetWorld()->SpawnActor<APhysicalKatana>(RightKatanaClass, FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
+		
+		if (RightKatana)
+		{
+			// Attach to right hand socket
+			RightKatana->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, RightHandSocketName);
+			UE_LOG(LogTemplateCharacter, Log, TEXT("Spawned and attached RightKatana to socket: %s"), *RightHandSocketName.ToString());
+		}
+		else
+		{
+			UE_LOG(LogTemplateCharacter, Error, TEXT("Failed to spawn RightKatana from class"));
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemplateCharacter, Warning, TEXT("RightKatanaClass not set - weapon will not spawn. Set it in Blueprint!"));
+	}
+}

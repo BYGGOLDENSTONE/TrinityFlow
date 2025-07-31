@@ -180,11 +180,25 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	class UShardComponent* ShardComponent;
 
+	/** Weapon Classes - Set these in Blueprint to spawn weapons */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapons")
+	TSubclassOf<class AOverrideKatana> LeftKatanaClass;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapons")
+	TSubclassOf<class APhysicalKatana> RightKatanaClass;
+	
+	/** Socket Names for weapon attachment */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapons")
+	FName LeftHandSocketName = "WeaponSocket_L";
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapons")
+	FName RightHandSocketName = "WeaponSocket_R";
+
 	/** Weapons */
-	UPROPERTY()
+	UPROPERTY(BlueprintReadOnly, Category = "Weapons")
 	class AOverrideKatana* LeftKatana;  // Soul damage katana
 
-	UPROPERTY()
+	UPROPERTY(BlueprintReadOnly, Category = "Weapons")
 	class APhysicalKatana* RightKatana;  // Physical damage katana
 
 	// Attack coordination system
@@ -196,6 +210,8 @@ protected:
 
 	UPROPERTY()
 	float AttackEndTime = 0.0f;
+	
+	FTimerHandle AttackResetTimer;
 	
 	// Defensive ability state
 	bool bDefensiveAbilityActive = false;
@@ -212,6 +228,9 @@ protected:
 	class AShardAltar* CurrentAltar = nullptr;
 	
 	void CheckForNearbyAltar();
+	
+	/** Spawn and attach weapons to the character */
+	void SpawnWeapons();
 
 protected:
 

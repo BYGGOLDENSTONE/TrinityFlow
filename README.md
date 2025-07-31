@@ -122,19 +122,13 @@ TrinityFlow/
    - Select "Generate Visual Studio project files"
    - Open the generated `.sln` file
 
-3. **Configure Weapon System**
-   - Create Blueprint classes: BP_OverrideKatana and BP_PhysicalKatana
-   - Add weapon meshes to the WeaponMesh component
-   - In Character Blueprint, set weapon class references
-   - Configure socket names (default: "weapon_l" and "weapon_r")
+3. **Configure Combat System**
+   - See [Combat System Setup](COMBAT_SYSTEM_SETUP.md) for complete setup guide
+   - Create weapon Blueprints and stats data assets
+   - Configure Game Instance with weapon stats
+   - Set up input actions and sockets
 
-4. **Configure Stats System**
-   - Create a Game Instance Blueprint
-   - Set up Data Assets for characters and weapons
-   - Configure the Stats Subsystem
-   - See [STATS_SYSTEM_GUIDE.md](STATS_SYSTEM_GUIDE.md) for details
-
-5. **Build and Run**
+4. **Build and Run**
    - Build the project in Visual Studio
    - Run from Unreal Editor
 
@@ -154,6 +148,9 @@ TrinityFlow/
 ## Documentation
 
 - [Game Design Document](GDD.md) - Complete game design specifications
+- [Combat System Setup](COMBAT_SYSTEM_SETUP.md) - Complete guide for setting up combat, weapons, and animations
+- [Shard System Setup](SHARD_SYSTEM_SETUP.md) - Guide for shard collection and altar activation system
+- [Implementation Plan](IMPLEMENTATION_PLAN.md) - Detailed technical roadmap
 - [Changelog](CHANGELOG.md) - Detailed update history
 
 ## Recent Updates
