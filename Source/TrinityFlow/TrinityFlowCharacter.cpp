@@ -10,6 +10,7 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
+#include "HUD/TrinityFlowHUD.h"
 #include "Core/HealthComponent.h"
 #include "Core/TagComponent.h"
 #include "Core/StateComponent.h"
@@ -465,6 +466,20 @@ void ATrinityFlowCharacter::AbilityE()
 		return;
 	}
 	
+	// First check if shard activation UI is open
+	if (APlayerController* PC = Cast<APlayerController>(GetController()))
+	{
+		if (ATrinityFlowHUD* HUD = Cast<ATrinityFlowHUD>(PC->GetHUD()))
+		{
+			if (HUD->IsShardActivationUIOpen())
+			{
+				// Process shard activation
+				HUD->ProcessShardActivation();
+				return;
+			}
+		}
+	}
+	
 	// Check if we're in non-combat state
 	if (StateComponent && !StateComponent->HasState(ECharacterState::Combat))
 	{
@@ -602,22 +617,115 @@ void ATrinityFlowCharacter::RightDefensiveAbility()
 		}
 	}
 	
-	// Space key - Order for right katana
+	// Space key - Defensive ability based on stance
 	if (StateComponent && StateComponent->HasState(ECharacterState::Combat))
 	{
-		if (bDefensiveAbilityActive && RightKatana)
+		if (bDefensiveAbilityActive)
 		{
-			// Let the katana handle its defensive ability
-			RightKatana->StartOrderWindow(PendingDamage, PendingAttacker);
+			// Get current stance to determine which defensive ability to use
+			EStanceType CurrentStance = StanceComponent ? StanceComponent->GetCurrentStance() : EStanceType::Power;
 			
-			// Process the order
-			if (RightKatana->ProcessOrder())
+			// Check timing for perfect/moderate/failed defense
+			float TotalWindow = AnimationComponent ? AnimationComponent->GetTotalDefenseWindow() : 1.0f;
+			float PerfectWindow = AnimationComponent ? AnimationComponent->GetPerfectWindowDuration() : 0.3f;
+			
+			bool bIsPerfect = DefensiveWindowTimer <= PerfectWindow;
+			bool bIsModerate = DefensiveWindowTimer <= TotalWindow && !bIsPerfect;
+			bool bIsLeftHand = (CurrentStance == EStanceType::Soul);
+			
+			// For Balanced stance, use Power stance animations temporarily
+			if (CurrentStance == EStanceType::Balanced)
 			{
-				// Perfect order executed
-				RightKatana->OnPerfectOrder();
+				bIsLeftHand = false;
 			}
 			
-			// Damage is handled inside ProcessOrder
+			if (bIsPerfect || bIsModerate)
+			{
+				// Play defensive animation
+				if (AnimationComponent)
+				{
+					AnimationComponent->PlayDefensiveAnimation(bIsLeftHand, bIsPerfect);
+				}
+				
+				// Calculate damage reduction
+				float DamageReduction = bIsPerfect ? 1.0f : 0.5f; // Perfect = 100% reduction, Moderate = 50%
+				float ActualDamage = PendingDamage * (1.0f - DamageReduction);
+				
+				// Apply damage if any
+				if (ActualDamage > 0 && HealthComponent)
+				{
+					FDamageInfo DamageInfo;
+					DamageInfo.Amount = ActualDamage;
+					DamageInfo.Type = PendingDamageType;
+					DamageInfo.Instigator = PendingAttacker;
+					
+					FVector DamageDirection = PendingAttacker ? 
+						(GetActorLocation() - PendingAttacker->GetActorLocation()).GetSafeNormal() : 
+						FVector::ForwardVector;
+					
+					HealthComponent->TakeDamage(DamageInfo, DamageDirection);
+				}
+				
+				// Show defense result text above the attacker
+				FString DefenseResult = bIsPerfect ? TEXT("PERFECT DEFENSE!") : TEXT("BLOCKED!");
+				FLinearColor TextColor = bIsPerfect ? FLinearColor::Green : FLinearColor::Yellow;
+				
+				// Get HUD and add floating text above attacker
+				if (PendingAttacker)
+				{
+					if (APlayerController* PC = Cast<APlayerController>(GetController()))
+					{
+						if (ATrinityFlowHUD* TrinityHUD = Cast<ATrinityFlowHUD>(PC->GetHUD()))
+						{
+							// Add defense result text
+							FVector AttackerLocation = PendingAttacker->GetActorLocation() + FVector(0, 0, 100);
+							if (bIsPerfect)
+							{
+								TrinityHUD->AddFloatingText(AttackerLocation, TEXT("PERFECT DEFENSE!"), FLinearColor::Green);
+							}
+							else
+							{
+								TrinityHUD->AddFloatingText(AttackerLocation, TEXT("BLOCKED!"), FLinearColor::Yellow);
+							}
+						}
+					}
+				}
+				
+				UE_LOG(LogTemplateCharacter, Log, TEXT("%s - Damage reduced from %.1f to %.1f"), 
+					*DefenseResult, PendingDamage, ActualDamage);
+			}
+			else
+			{
+				// Failed defense - take full damage
+				if (HealthComponent)
+				{
+					FDamageInfo DamageInfo;
+					DamageInfo.Amount = PendingDamage;
+					DamageInfo.Type = PendingDamageType;
+					DamageInfo.Instigator = PendingAttacker;
+					
+					FVector DamageDirection = PendingAttacker ? 
+						(GetActorLocation() - PendingAttacker->GetActorLocation()).GetSafeNormal() : 
+						FVector::ForwardVector;
+					
+					HealthComponent->TakeDamage(DamageInfo, DamageDirection);
+				}
+				
+				// Show failed defense text above the attacker
+				if (PendingAttacker)
+				{
+					if (APlayerController* PC = Cast<APlayerController>(GetController()))
+					{
+						if (ATrinityFlowHUD* TrinityHUD = Cast<ATrinityFlowHUD>(PC->GetHUD()))
+						{
+							FVector AttackerLocation = PendingAttacker->GetActorLocation() + FVector(0, 0, 100);
+							TrinityHUD->AddFloatingText(AttackerLocation, TEXT("FAILED!"), FLinearColor::Red);
+						}
+					}
+				}
+				
+				UE_LOG(LogTemplateCharacter, Log, TEXT("Failed defense - Full damage taken: %.1f"), PendingDamage);
+			}
 			
 			// Reset defensive state
 			bDefensiveAbilityActive = false;

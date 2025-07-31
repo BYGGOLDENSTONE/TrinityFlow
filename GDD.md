@@ -59,6 +59,29 @@
 - Formula: `Soul Damage = AttackPoint * 2`
 - Cannot affect Mechanical enemies
 
+### Shard System
+
+#### Shard Types
+- **Soul Shards**: Blue shards that enhance soul damage
+- **Power Shards**: Orange shards that enhance physical damage
+
+#### Shard Mechanics
+- **Collection**: Pick up inactive shards scattered throughout levels
+- **Activation**: Use shard altars to convert inactive shards to active ones
+- **Damage Bonus**: Each active shard grants 3% damage bonus to its type
+- **Stance Bonus**: Double the shard bonus when in matching stance
+
+#### Damage Calculation Example
+- 3 active Soul shards = 9% soul damage bonus
+- In Soul Stance: 9% base + 9% stance bonus = 18% total soul damage
+- 4 active Power shards = 12% physical damage bonus  
+- In Power Stance: 12% base + 12% stance bonus = 24% total physical damage
+
+#### Stance Determination
+- **Soul Stance**: More Soul shards than Power shards
+- **Power Stance**: More Power shards than Soul shards
+- **Balanced Stance**: Equal shards (±1 difference)
+
 ### Tag System
 
 Tags define character properties and damage interactions:
@@ -154,11 +177,19 @@ Dynamic combat modifiers based on active shard balance:
 - **Effect**: Marked enemy receives 75% of damage dealt to others as soul damage
 - **AoE Rule**: 30% damage for area attacks
 
-#### Shift - Scripted Dodge
-- **Window**: 1.5 seconds total
-- **Moderate (0-0.75s)**: Take 50% damage
-- **Perfect (0.75-1.5s)**: No damage + Code Break cooldown reset
-- **Visual**: Orange (moderate) → Green (perfect)
+#### Space - Unified Defensive Ability
+- **Stance-Based**: Different animations/effects based on current stance
+  - **Soul Stance**: Scripted Dodge (left-hand animation)
+  - **Power Stance**: Order (right-hand animation)
+  - **Balanced Stance**: Uses Power stance animation (temporary)
+- **Timing Windows** (configurable in Blueprint):
+  - **Perfect (0-0.3s)**: 100% damage reduction + parry animation
+  - **Moderate (0.3-1.0s)**: 50% damage reduction + block animation
+  - **Failed (>1.0s)**: 0% damage reduction + hit response animation
+- **Visual Feedback**: Shows result text above attacker
+  - "PERFECT DEFENSE!" (Green)
+  - "BLOCKED!" (Yellow)
+  - "FAILED!" (Red)
 
 ### Right Katana (Physical Katana)
 *Powerful physical damage weapon with defensive capabilities*
@@ -182,13 +213,9 @@ Dynamic combat modifiers based on active shard balance:
 - **Cooldown**: 8 seconds
 - **Effect**: TBD
 
-#### Space - Order
-- **Window**: 1.5 seconds total
-- **Moderate (0-0.75s)**: Take 50% damage
-- **Perfect (0.75-1.5s)**: No damage + counter attack
-- **Counter Effect**: 
-  - Strips shield if present
-  - Reduces armor by 25% if no shield
+#### Space - Order (Deprecated)
+- See "Space - Unified Defensive Ability" under Left Katana section
+- Order is now activated when in Power Stance
 - **Non-Combat**: Functions as jump
 
 ---
@@ -294,6 +321,29 @@ When enemy is marked by Echoes of Data:
 
 ## UI/UX Design
 
+### Color Theming
+
+#### Left/Soul Elements (Blue Theme #0080FF)
+- Soul damage numbers
+- Left katana (Override Katana) effects
+- Soul shard pickups and UI
+- Soul altars and activation effects
+- Soul damage bonus text in HUD
+- Echoes of Data ability effects
+
+#### Right/Physical Elements (Orange Theme #FF8000)
+- Physical damage numbers
+- Right katana (Physical Katana) effects
+- Power shard pickups and UI
+- Power altars and activation effects
+- Physical damage bonus text in HUD
+- Order defensive ability effects
+
+#### Defensive Result Colors
+- **Perfect Defense**: Green
+- **Moderate Defense (Blocked)**: Yellow
+- **Failed Defense**: Red
+
 ### HUD Elements
 
 #### Player Health Bar
@@ -327,6 +377,21 @@ When enemy is marked by Echoes of Data:
 - **Cooldown**: Red when on cooldown, green when ready
 
 ### Visual Effects
+
+#### Color Theming
+- **Soul/Left Elements**: Blue theme (#0080FF)
+  - Soul damage numbers
+  - Left katana abilities
+  - Soul shard UI elements
+  - Soul altar interactions
+- **Physical/Right Elements**: Orange theme (#FF8000)
+  - Physical damage numbers
+  - Right katana abilities
+  - Power shard UI elements
+  - Power altar interactions
+- **Neutral Elements**: White/Gray
+  - Defense result text
+  - General UI elements
 
 #### Attack Indicators
 - Growing lines from attacker to target

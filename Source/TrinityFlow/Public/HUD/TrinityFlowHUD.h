@@ -15,6 +15,8 @@ struct FFloatingDamageNumber
     float LifeTime;
     FLinearColor Color;
     bool bIsEcho;
+    FString Text; // For defense results
+    EDamageType DamageType; // To determine color
 
     FFloatingDamageNumber()
     {
@@ -23,6 +25,8 @@ struct FFloatingDamageNumber
         LifeTime = 0.0f;
         Color = FLinearColor::White;
         bIsEcho = false;
+        Text = "";
+        DamageType = EDamageType::Physical;
     }
 };
 
@@ -49,7 +53,8 @@ public:
     UFUNCTION()
     void OnDamageDealt(AActor* DamagedActor, float ActualDamage, AActor* DamageInstigator, EDamageType DamageType);
 
-    void AddFloatingDamageNumber(const FVector& Location, float Damage, bool bIsEcho = false);
+    void AddFloatingDamageNumber(const FVector& Location, float Damage, bool bIsEcho = false, EDamageType DamageType = EDamageType::Physical);
+    void AddFloatingText(const FVector& Location, const FString& Text, const FLinearColor& Color);
     
     // Shard Activation UI
     UFUNCTION()
@@ -60,6 +65,9 @@ public:
     
     UFUNCTION()
     bool IsShardActivationUIOpen() const { return ShardActivationUIState != EShardActivationUIState::Closed; }
+    
+    UFUNCTION()
+    void ProcessShardActivation();
 
 protected:
     void DrawHealthBar();
@@ -82,7 +90,6 @@ protected:
     FString GetStatesString(ECharacterState InStates);
     
     // Shard Activation UI Helpers
-    void ProcessShardActivation();
     void UpdateStancePreview();
     EStanceType CalculateStanceFromShards(int32 SoulActive, int32 PowerActive) const;
 

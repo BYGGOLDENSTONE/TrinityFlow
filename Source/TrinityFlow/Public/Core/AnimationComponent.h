@@ -46,6 +46,23 @@ public:
     // Combat State
     UFUNCTION(BlueprintCallable, Category = "Combat")
     void SetCombatState(bool bInCombat);
+    
+    // Defensive Animations
+    UFUNCTION(BlueprintCallable, Category = "Animation|Defense")
+    void PlayHitResponse();
+    
+    UFUNCTION(BlueprintCallable, Category = "Animation|Defense")
+    void PlayDefensiveAnimation(bool bIsLeftHand, bool bIsPerfect);
+    
+    // Timing Window Getters
+    UFUNCTION(BlueprintPure, Category = "Animation|Defense")
+    float GetPerfectWindowDuration() const { return PerfectWindowDuration; }
+    
+    UFUNCTION(BlueprintPure, Category = "Animation|Defense")
+    float GetModerateWindowDuration() const { return ModerateWindowDuration; }
+    
+    UFUNCTION(BlueprintPure, Category = "Animation|Defense")
+    float GetTotalDefenseWindow() const { return PerfectWindowDuration + ModerateWindowDuration; }
 
 protected:
     // Animation State
@@ -94,6 +111,29 @@ protected:
 
     UPROPERTY()
     UAnimInstance* AnimInstance = nullptr;
+    
+    // Defensive Animation Montages
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Montages|Defense", meta = (DisplayName = "Hit Response"))
+    UAnimMontage* HitResponseMontage = nullptr;
+    
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Montages|Defense", meta = (DisplayName = "Right Parry"))
+    UAnimMontage* RightParryMontage = nullptr;
+    
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Montages|Defense", meta = (DisplayName = "Left Parry"))
+    UAnimMontage* LeftParryMontage = nullptr;
+    
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Montages|Defense", meta = (DisplayName = "Right Block"))
+    UAnimMontage* RightBlockMontage = nullptr;
+    
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Montages|Defense", meta = (DisplayName = "Left Block"))
+    UAnimMontage* LeftBlockMontage = nullptr;
+    
+    // Defensive Timing Windows
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Timing", meta = (DisplayName = "Perfect Window Duration", ClampMin = "0.1", ClampMax = "1.0"))
+    float PerfectWindowDuration = 0.3f;
+    
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Timing", meta = (DisplayName = "Moderate Window Duration", ClampMin = "0.1", ClampMax = "2.0"))
+    float ModerateWindowDuration = 0.7f;
 
 private:
     // Internal Functions

@@ -100,11 +100,8 @@ void ATrinityFlowHUD::Tick(float DeltaTime)
                 }
             }
             
-            // Check for E key to activate
-            if (PC->WasInputKeyJustPressed(EKeys::E))
-            {
-                ProcessShardActivation();
-            }
+            // E key activation is now handled through character input
+            // This prevents input conflicts with Enhanced Input System
         }
     }
 }
@@ -342,18 +339,18 @@ void ATrinityFlowHUD::DrawPlayerInfo()
         {
             case EStanceType::Power:
                 StanceName = TEXT("Power Stance");
-                StanceColor = FLinearColor::Red;
-                BonusText = TEXT("+15% Physical Damage");
+                StanceColor = FLinearColor(1.0f, 0.5f, 0.0f); // Orange
+                BonusText = TEXT("Double Physical Shard Bonus");
                 break;
             case EStanceType::Soul:
                 StanceName = TEXT("Soul Stance");
-                StanceColor = FLinearColor(0.2f, 0.6f, 1.0f); // Light Blue
-                BonusText = TEXT("+15% Soul Damage");
+                StanceColor = FLinearColor(0.0f, 0.5f, 1.0f); // Blue
+                BonusText = TEXT("Double Soul Shard Bonus");
                 break;
             case EStanceType::Balanced:
                 StanceName = TEXT("Balanced Stance");
                 StanceColor = FLinearColor(0.8f, 0.2f, 1.0f); // Purple
-                BonusText = TEXT("+10% All Damage");
+                BonusText = TEXT("No Stance Bonus");
                 break;
             default:
                 // Default values already set above
@@ -395,6 +392,31 @@ void ATrinityFlowHUD::DrawPlayerInfo()
         FString PowerText = FString::Printf(TEXT("Power: %d active / %d inactive"), PowerActive, PowerInactive);
         DrawText(PowerText, FLinearColor::Black, X + 1, Y + 1, nullptr, 0.9f);
         DrawText(PowerText, FLinearColor::Red, X, Y, nullptr, 0.9f);
+        Y += LineHeight;
+        
+        // Damage Bonuses
+        Y += 5;
+        DrawText(TEXT("--- DAMAGE BONUSES ---"), FLinearColor::Black, X + 1, Y + 1, nullptr, 0.9f);
+        DrawText(TEXT("--- DAMAGE BONUSES ---"), FLinearColor::White, X, Y, nullptr, 0.9f);
+        Y += LineHeight;
+        
+        float SoulBonus, PhysicalBonus, SoulStanceBonus, PhysicalStanceBonus;
+        ShardComp->GetDamageBonuses(SoulBonus, PhysicalBonus, SoulStanceBonus, PhysicalStanceBonus);
+        
+        // Soul damage bonus
+        float TotalSoulBonus = SoulBonus + SoulStanceBonus;
+        FString SoulBonusText = FString::Printf(TEXT("Soul Damage: +%.0f%% (%.0f%% shards + %.0f%% stance)"), 
+            TotalSoulBonus * 100.0f, SoulBonus * 100.0f, SoulStanceBonus * 100.0f);
+        DrawText(SoulBonusText, FLinearColor::Black, X + 1, Y + 1, nullptr, 0.9f);
+        DrawText(SoulBonusText, FLinearColor(0.0f, 0.5f, 1.0f), X, Y, nullptr, 0.9f);
+        Y += LineHeight;
+        
+        // Physical damage bonus
+        float TotalPhysicalBonus = PhysicalBonus + PhysicalStanceBonus;
+        FString PhysicalBonusText = FString::Printf(TEXT("Physical Damage: +%.0f%% (%.0f%% shards + %.0f%% stance)"), 
+            TotalPhysicalBonus * 100.0f, PhysicalBonus * 100.0f, PhysicalStanceBonus * 100.0f);
+        DrawText(PhysicalBonusText, FLinearColor::Black, X + 1, Y + 1, nullptr, 0.9f);
+        DrawText(PhysicalBonusText, FLinearColor(1.0f, 0.5f, 0.0f), X, Y, nullptr, 0.9f);
         Y += LineHeight;
         
         // Total
@@ -551,27 +573,64 @@ void ATrinityFlowHUD::OnDamageDealt(AActor* DamagedActor, float ActualDamage, AA
             bIsEcho = StateComp->IsMarked() && DamageType == EDamageType::Soul;
         }
         
-        AddFloatingDamageNumber(DamagedActor->GetActorLocation(), ActualDamage, bIsEcho);
+        AddFloatingDamageNumber(DamagedActor->GetActorLocation(), ActualDamage, bIsEcho, DamageType);
     }
 }
 
-void ATrinityFlowHUD::AddFloatingDamageNumber(const FVector& Location, float Damage, bool bIsEcho)
+void ATrinityFlowHUD::AddFloatingDamageNumber(const FVector& Location, float Damage, bool bIsEcho, EDamageType DamageType)
 {
     FFloatingDamageNumber NewNumber;
     NewNumber.WorldLocation = Location + FVector(FMath::RandRange(-30.0f, 30.0f), FMath::RandRange(-30.0f, 30.0f), 100.0f);
     NewNumber.Damage = Damage;
     NewNumber.LifeTime = 2.0f;
     NewNumber.bIsEcho = bIsEcho;
+    NewNumber.DamageType = DamageType;
     
-    // Set color based on damage type
-    if (bIsEcho)
+    // Handle special defense result cases
+    if (Damage < 0)
     {
-        NewNumber.Color = FLinearColor(0.0f, 0.5f, 1.0f); // Blue for echo damage
+        if (Damage == -1.0f)
+        {
+            // Perfect defense or blocked
+            NewNumber.Text = TEXT("PERFECT DEFENSE!");
+            NewNumber.Color = FLinearColor::Green;
+        }
+        else if (Damage == -2.0f)
+        {
+            // Failed defense
+            NewNumber.Text = TEXT("FAILED!");
+            NewNumber.Color = FLinearColor::Red;
+        }
     }
     else
     {
-        NewNumber.Color = FLinearColor(1.0f, 0.0f, 0.0f); // Red for normal damage
+        // Set color based on damage type
+        if (bIsEcho)
+        {
+            NewNumber.Color = FLinearColor(0.0f, 0.5f, 1.0f); // Blue for echo damage
+        }
+        else if (DamageType == EDamageType::Soul)
+        {
+            NewNumber.Color = FLinearColor(0.0f, 0.5f, 1.0f); // Blue for soul damage (#0080FF)
+        }
+        else
+        {
+            NewNumber.Color = FLinearColor(1.0f, 0.5f, 0.0f); // Orange for physical damage (#FF8000)
+        }
     }
+    
+    FloatingDamageNumbers.Add(NewNumber);
+}
+
+void ATrinityFlowHUD::AddFloatingText(const FVector& Location, const FString& Text, const FLinearColor& Color)
+{
+    FFloatingDamageNumber NewNumber;
+    NewNumber.WorldLocation = Location + FVector(FMath::RandRange(-30.0f, 30.0f), FMath::RandRange(-30.0f, 30.0f), 100.0f);
+    NewNumber.Damage = 0.0f;
+    NewNumber.LifeTime = 2.0f;
+    NewNumber.bIsEcho = false;
+    NewNumber.Text = Text;
+    NewNumber.Color = Color;
     
     FloatingDamageNumbers.Add(NewNumber);
 }
@@ -598,10 +657,21 @@ void ATrinityFlowHUD::DrawFloatingDamageNumbers()
                 float FontScale = FMath::Clamp(1.5f + (DamageNumber.Damage / 50.0f), 1.5f, 3.5f);
                 
                 // Format damage text
-                FString DamageText = FString::Printf(TEXT("%.0f"), DamageNumber.Damage);
-                if (DamageNumber.bIsEcho)
+                FString DamageText;
+                
+                // Check if this is a defense result text
+                if (!DamageNumber.Text.IsEmpty())
                 {
-                    DamageText = TEXT("ECHO ") + DamageText;
+                    DamageText = DamageNumber.Text;
+                    FontScale = 2.0f; // Fixed size for defense results
+                }
+                else
+                {
+                    DamageText = FString::Printf(TEXT("%.0f"), DamageNumber.Damage);
+                    if (DamageNumber.bIsEcho)
+                    {
+                        DamageText = TEXT("ECHO ") + DamageText;
+                    }
                 }
                 
                 // Draw shadow
@@ -770,12 +840,21 @@ void ATrinityFlowHUD::OpenShardActivationUI(AShardAltar* Altar)
         ShardComp->GetShardCounts(CachedSoulActive, CachedSoulInactive, CachedPowerActive, CachedPowerInactive);
     }
     
+    // Subscribe to altar events to know when to close the UI
+    Altar->OnAltarInteractionEnded.AddDynamic(this, &ATrinityFlowHUD::CloseShardActivationUI);
+    
     // Don't change input mode - we'll handle input filtering in the character class
     UE_LOG(LogTemp, Log, TEXT("Shard activation UI opened"));
 }
 
 void ATrinityFlowHUD::CloseShardActivationUI()
 {
+    // Unsubscribe from altar events
+    if (ActiveAltar)
+    {
+        ActiveAltar->OnAltarInteractionEnded.RemoveDynamic(this, &ATrinityFlowHUD::CloseShardActivationUI);
+    }
+    
     ShardActivationUIState = EShardActivationUIState::Closed;
     ActiveAltar = nullptr;
     bSelectingSoulShards = true;
@@ -940,8 +1019,9 @@ void ATrinityFlowHUD::ProcessShardActivation()
         // Call the altar to activate specific amounts
         ActiveAltar->StartSelectiveActivation(PlayerCharacter, SoulToActivate, PowerToActivate);
         
-        // Close the UI
-        CloseShardActivationUI();
+        // Don't close the UI immediately - let the altar handle it
+        // The UI will close when the altar broadcasts OnAltarInteractionEnded
+        UE_LOG(LogTemp, Log, TEXT("Started shard activation - Soul: %d, Power: %d"), SoulToActivate, PowerToActivate);
     }
 }
 

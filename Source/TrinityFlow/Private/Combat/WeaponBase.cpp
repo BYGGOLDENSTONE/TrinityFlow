@@ -1,5 +1,6 @@
 #include "Combat/WeaponBase.h"
 #include "Core/HealthComponent.h"
+#include "Core/ShardComponent.h"
 #include "Components/SceneComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "GameFramework/Pawn.h"
@@ -122,6 +123,30 @@ void AWeaponBase::ExecuteBasicAttack(AActor* Target)
     {
         FDamageInfo DamageInfo;
         DamageInfo.Amount = OwnerHealthComponent->GetResources().AttackPoint;
+        
+        // Apply shard damage bonuses
+        if (OwnerPawn)
+        {
+            if (UShardComponent* ShardComp = OwnerPawn->FindComponentByClass<UShardComponent>())
+            {
+                float DamageMultiplier = 1.0f;
+                
+                if (BasicDamageType == EDamageType::Soul)
+                {
+                    DamageMultiplier += ShardComp->GetSoulDamageBonus();
+                }
+                else if (BasicDamageType == EDamageType::Physical)
+                {
+                    DamageMultiplier += ShardComp->GetPhysicalDamageBonus();
+                }
+                
+                DamageInfo.Amount *= DamageMultiplier;
+                
+                UE_LOG(LogTemp, Warning, TEXT("Applied shard damage bonus: %.1f%% (Multiplier: %.2f)"), 
+                    (DamageMultiplier - 1.0f) * 100.0f, DamageMultiplier);
+            }
+        }
+        
         DamageInfo.Type = BasicDamageType;
         DamageInfo.Instigator = OwnerPawn;
         

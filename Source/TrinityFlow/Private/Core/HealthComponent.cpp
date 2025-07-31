@@ -1,6 +1,7 @@
 #include "Core/HealthComponent.h"
 #include "Core/DamageCalculator.h"
 #include "Core/TagComponent.h"
+#include "Core/AnimationComponent.h"
 #include "GameFramework/Actor.h"
 
 UHealthComponent::UHealthComponent()
@@ -35,6 +36,15 @@ void UHealthComponent::TakeDamage(const FDamageInfo& DamageInfo, const FVector& 
         
         OnHealthChanged.Broadcast(Resources.Health);
         OnDamageDealt.Broadcast(GetOwner(), ActualDamageDealt, DamageInfo.Instigator, DamageInfo.Type);
+        
+        // Play hit response animation
+        if (AActor* Owner = GetOwner())
+        {
+            if (UAnimationComponent* AnimComp = Owner->FindComponentByClass<UAnimationComponent>())
+            {
+                AnimComp->PlayHitResponse();
+            }
+        }
         
         if (!IsAlive())
         {

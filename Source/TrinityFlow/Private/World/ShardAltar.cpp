@@ -178,8 +178,13 @@ void AShardAltar::OnOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor*
 
 void AShardAltar::StartSelectiveActivation(AActor* Interactor, int32 SoulShardsToActivate, int32 PowerShardsToActivate)
 {
+    UE_LOG(LogTemp, Warning, TEXT("StartSelectiveActivation called - Soul: %d, Power: %d"), SoulShardsToActivate, PowerShardsToActivate);
+    
     if (!Interactor || bIsActivating)
     {
+        UE_LOG(LogTemp, Warning, TEXT("StartSelectiveActivation failed - Interactor: %s, bIsActivating: %s"), 
+            Interactor ? TEXT("Valid") : TEXT("NULL"), 
+            bIsActivating ? TEXT("true") : TEXT("false"));
         return;
     }
     
@@ -208,12 +213,16 @@ void AShardAltar::StartSelectiveActivation(AActor* Interactor, int32 SoulShardsT
     bIsSelectiveActivation = true;
     ActivationTimer = 0.0f;
     
+    UE_LOG(LogTemp, Warning, TEXT("Altar activation started - PuzzleType: %d, HoldDuration: %.2f"), 
+        (int32)PuzzleType, HoldDuration);
+    
     OnAltarInteractionStarted.Broadcast(Interactor);
     OnActivationStarted(Interactor);
     
     // If no puzzle, activate immediately
     if (PuzzleType == EAltarPuzzleType::None)
     {
+        UE_LOG(LogTemp, Warning, TEXT("No puzzle - activating immediately"));
         CompleteSelectiveActivation();
     }
 }
@@ -346,10 +355,17 @@ void AShardAltar::UpdateActivationProgress(float DeltaTime)
     {
         ActivationTimer += DeltaTime;
         
+        UE_LOG(LogTemp, Warning, TEXT("Altar activation progress: %.2f / %.2f"), ActivationTimer, HoldDuration);
+        
         if (ActivationTimer >= HoldDuration)
         {
             CompleteActivation();
         }
+    }
+    else if (PuzzleType == EAltarPuzzleType::None)
+    {
+        // Should have been completed immediately in StartSelectiveActivation
+        UE_LOG(LogTemp, Warning, TEXT("Altar with None puzzle type still updating?"));
     }
     // Other puzzle types would update here
 }

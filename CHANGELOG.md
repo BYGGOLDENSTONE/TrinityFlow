@@ -5,6 +5,68 @@ All notable changes to TrinityFlow are documented in this file.
 ## [Latest] - 2025-07-31
 
 ### Added
+- **Unified Defensive System**
+  - All defensive abilities now use Space key (stance-dependent)
+  - Configurable timing windows in Blueprint
+  - Perfect timing (0-0.3s): No damage taken with parry animation
+  - Moderate timing (0.3-1.0s): 50% damage reduction with block animation
+  - Failed defense (>1.0s): Full damage with hit response animation
+  - Visual feedback displays defense result above attacker
+
+- **Defensive Animation Montages**
+  - Hit Response montage for taking damage
+  - Left/Right Parry montages for perfect defense
+  - Left/Right Block montages for moderate defense
+  - Animations play based on current stance
+  - Balanced stance temporarily uses Power animations
+
+- **Shard Damage Bonus System**
+  - Each active shard grants 3% damage increase
+  - Stance bonus: Doubles shard bonus when in matching stance
+  - Example: 3 soul shards = 9% soul damage (18% in Soul stance)
+  - Real-time damage bonus display in HUD
+  - Clear breakdown shows shard bonus + stance bonus
+
+- **UI Color Theming**
+  - Blue theme (#0080FF) for soul/left elements
+  - Orange theme (#FF8000) for physical/right elements
+  - Consistent color scheme throughout all UI
+  - Damage numbers color-coded by type
+  - HUD elements use appropriate theme colors
+
+### Changed
+- **Defensive Input System**
+  - Removed separate Shift key binding for left defense
+  - Space key now handles all defensive abilities
+  - Defense type determined by current stance
+  - Cleaner, more intuitive control scheme
+
+- **Damage Calculation**
+  - Shard bonuses now apply to weapon damage
+  - Damage numbers accurately reflect all bonuses
+  - Defense timing affects damage reduction
+
+### Fixed
+- **Altar Activation Crash**
+  - Removed direct input checking from HUD
+  - Character's AbilityE now handles shard activation UI
+  - Resolved Enhanced Input System conflict
+  - ProcessShardActivation made public for proper access
+
+- **Compilation Errors**
+  - Added getter methods for protected timing windows
+  - Fixed TakeDamage signature with FDamageInfo struct
+  - Proper damage direction calculation
+
+### Documentation
+- Updated README with defensive system changes
+- Added color theming to Game Design Document
+- Documented shard damage bonus mechanics
+- Updated control scheme documentation
+
+## [Previous] - 2025-07-31
+
+### Added
 - **C++ Weapon Spawning System**
   - Automatic weapon spawning in BeginPlay
   - Socket attachment support with customizable names

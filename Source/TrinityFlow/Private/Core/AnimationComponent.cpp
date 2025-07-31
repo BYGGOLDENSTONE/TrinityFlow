@@ -274,5 +274,89 @@ void UAnimationComponent::OnMontageComplete(UAnimMontage* Montage, bool bInterru
     }
 }
 
+void UAnimationComponent::PlayHitResponse()
+{
+    if (!HitResponseMontage || !AnimInstance || bIsAnimationLocked)
+    {
+        return;
+    }
+
+    // Stop any wondering animation
+    StopWonderingTimer();
+    if (bIsWondering && WonderingMontage)
+    {
+        AnimInstance->Montage_Stop(0.2f, WonderingMontage);
+        bIsWondering = false;
+    }
+
+    // Play hit response montage
+    float MontageLength = AnimInstance->Montage_Play(HitResponseMontage, 1.0f);
+    
+    if (MontageLength > 0.0f)
+    {
+        LockAnimation(HitResponseMontage);
+        
+        // Set up completion callback
+        FOnMontageEnded MontageEndedDelegate;
+        MontageEndedDelegate.BindUObject(this, &UAnimationComponent::OnMontageComplete);
+        AnimInstance->Montage_SetEndDelegate(MontageEndedDelegate, HitResponseMontage);
+        
+        UE_LOG(LogTemp, Log, TEXT("Playing hit response montage"));
+    }
+}
+
+void UAnimationComponent::PlayDefensiveAnimation(bool bIsLeftHand, bool bIsPerfect)
+{
+    if (!AnimInstance || bIsAnimationLocked)
+    {
+        return;
+    }
+
+    // Stop any wondering animation
+    StopWonderingTimer();
+    if (bIsWondering && WonderingMontage)
+    {
+        AnimInstance->Montage_Stop(0.2f, WonderingMontage);
+        bIsWondering = false;
+    }
+
+    // Select the appropriate montage
+    UAnimMontage* MontageToPlay = nullptr;
+    
+    if (bIsLeftHand)
+    {
+        MontageToPlay = bIsPerfect ? LeftParryMontage : LeftBlockMontage;
+    }
+    else
+    {
+        MontageToPlay = bIsPerfect ? RightParryMontage : RightBlockMontage;
+    }
+    
+    if (!MontageToPlay)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("No defensive montage found for %s %s"), 
+            bIsLeftHand ? TEXT("Left") : TEXT("Right"),
+            bIsPerfect ? TEXT("Parry") : TEXT("Block"));
+        return;
+    }
+
+    // Play the defensive montage
+    float MontageLength = AnimInstance->Montage_Play(MontageToPlay, 1.0f);
+    
+    if (MontageLength > 0.0f)
+    {
+        LockAnimation(MontageToPlay);
+        
+        // Set up completion callback
+        FOnMontageEnded MontageEndedDelegate;
+        MontageEndedDelegate.BindUObject(this, &UAnimationComponent::OnMontageComplete);
+        AnimInstance->Montage_SetEndDelegate(MontageEndedDelegate, MontageToPlay);
+        
+        UE_LOG(LogTemp, Log, TEXT("Playing %s %s montage"), 
+            bIsLeftHand ? TEXT("Left") : TEXT("Right"),
+            bIsPerfect ? TEXT("Parry") : TEXT("Block"));
+    }
+}
+
 
 

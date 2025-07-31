@@ -56,20 +56,31 @@ TrinityFlow is a fast-paced action game where players wield two distinct weapons
 - **Collectible Shards**: Soul and Power shards scattered throughout levels
 - **Shard Activation**: Altars convert inactive shards to active ones
 - **Dynamic Stances**: Active shard balance determines combat stance
-  - Power Stance: More Power shards (+15% physical damage)
-  - Soul Stance: More Soul shards (+15% soul damage)
-  - Balanced Stance: Equal shards (+10% all damage)
+  - Power Stance: More Power shards (doubles physical shard bonus)
+  - Soul Stance: More Soul shards (doubles soul shard bonus)
+  - Balanced Stance: Equal shards (no stance bonus)
+- **Damage Bonuses**: Each active shard grants 3% damage bonus
+  - Stance bonus: Doubles the shard bonus when in matching stance
+  - Clear UI display shows shard and stance bonuses separately
 - **Guardian Challenges**: Some altars require defeating guardians
 - **Activation Puzzles**: Hold-to-activate, timing, and pattern matching
 
 ## Technical Features
 
 ### Animation System (Updated)
-- **Simplified Animation Component**: Direct attack execution without complex buffering
-- **4 Essential Montages**: Right Slash, Left Slash, Interaction, Wondering
+- **Comprehensive Animation Component**: Manages all character animations
+- **Combat Montages**: 
+  - Attack: Right Slash, Left Slash
+  - Defense: Hit Response, Left/Right Parry (perfect), Left/Right Block (moderate)
+  - Utility: Interaction, Wondering
+- **Defensive System**: 
+  - Space key for all defensive abilities (stance-dependent)
+  - Perfect timing: No damage taken
+  - Moderate timing: 50% damage reduction
+  - Failed timing: Full damage
+  - Visual feedback shows defense result above enemy
 - **Wondering System**: Automatic look-around animation after 5 seconds idle
-- **Animation-Driven Timing**: Attack duration matches actual animation length
-- **Configurable Speed Scale**: Compensate for blueprint animation speed issues
+- **Configurable Timing Windows**: Adjustable perfect/moderate defense windows
 
 ### Stats Management System
 - Centralized configuration for all gameplay values
@@ -78,9 +89,13 @@ TrinityFlow is a fast-paced action game where players wield two distinct weapons
 - Runtime tweaking and reloading support
 
 ### Enhanced Combat Visuals
-- Floating damage numbers (red for direct, blue for echo)
-- Enemy info panels above heads showing health, stats, and tags
-- Color-coded attack timing windows for defensive abilities
+- **Color-Themed UI**: 
+  - Blue theme for soul/left-related elements
+  - Orange theme for physical/right-related elements
+- **Damage Numbers**: Blue for soul damage, orange for physical damage
+- **Defense Feedback**: "PERFECT DEFENSE!", "BLOCKED!", or "FAILED!" text above enemies
+- **Enemy Info Panels**: Health, stats, and tags displayed above enemies
+- **Shard Bonus Display**: Real-time damage bonus breakdown in HUD
 - No UI backgrounds for cleaner visuals
 
 ### Physics-Based Combat
@@ -142,8 +157,10 @@ TrinityFlow/
 - **Ability E**: E key (Right katana ability / Interaction)
 - **Ability Tab**: Tab key (Echoes of Data - Left katana)
 - **Ability R**: R key (Right katana ability)
-- **Left Defensive**: Shift (Scripted Dodge)
-- **Right Defensive**: Space (Order / Jump out of combat)
+- **Defensive Ability**: Space (Stance-dependent defense / Jump out of combat)
+  - Soul Stance: Soul-themed defense
+  - Power Stance: Physical-themed defense
+  - Balanced Stance: Power stance animations (temporary)
 
 ## Documentation
 
@@ -154,6 +171,24 @@ TrinityFlow/
 - [Changelog](CHANGELOG.md) - Detailed update history
 
 ## Recent Updates
+
+### Defensive System & UI Overhaul (2025-07-31)
+- **Unified Defensive System**: All defensive abilities now use Space key
+  - Stance determines which defensive animation plays
+  - Perfect timing window: No damage taken
+  - Moderate timing window: 50% damage reduction
+  - Failed defense: Full damage taken
+- **Visual Feedback System**: 
+  - Defense results displayed as floating text
+  - Color-coded damage numbers (blue for soul, orange for physical)
+- **Shard Damage Bonus System**:
+  - 3% damage bonus per active shard
+  - Stance doubles matching shard bonuses
+  - Real-time bonus display in HUD
+- **UI Color Theming**: 
+  - Consistent blue/orange color scheme throughout
+  - Clear visual distinction between damage types
+- **Altar Activation Fix**: Resolved input conflict crash
 
 ### Shard System Implementation (2025-07-30)
 - **ShardComponent**: Manages shard collection and activation
