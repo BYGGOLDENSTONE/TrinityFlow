@@ -25,6 +25,8 @@
 #include "DrawDebugHelpers.h"
 #include "Engine/World.h"
 #include "Kismet/GameplayStatics.h"
+#include "World/ShardAltar.h"
+#include "HUD/TrinityFlowHUD.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -140,6 +142,12 @@ void ATrinityFlowCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInp
 
 void ATrinityFlowCharacter::Move(const FInputActionValue& Value)
 {
+	// Check if UI is blocking input
+	if (IsUIBlockingInput())
+	{
+		return;
+	}
+	
 	// input is a Vector2D
 	FVector2D MovementVector = Value.Get<FVector2D>();
 
@@ -170,6 +178,12 @@ void ATrinityFlowCharacter::Move(const FInputActionValue& Value)
 
 void ATrinityFlowCharacter::Look(const FInputActionValue& Value)
 {
+	// Check if UI is blocking input
+	if (IsUIBlockingInput())
+	{
+		return;
+	}
+	
 	// input is a Vector2D
 	FVector2D LookAxisVector = Value.Get<FVector2D>();
 
@@ -231,70 +245,7 @@ void ATrinityFlowCharacter::BeginPlay()
 		}
 	}
 
-	// Spawn dual katanas
-	FActorSpawnParameters SpawnParams;
-	SpawnParams.Owner = this;
-	SpawnParams.Instigator = this;
-
-	// Use configurable socket names
-
-	// Spawn left katana (soul damage)
-	if (LeftKatanaClass)
-	{
-		LeftKatana = GetWorld()->SpawnActor<AOverrideKatana>(LeftKatanaClass, GetActorLocation(), GetActorRotation(), SpawnParams);
-		if (LeftKatana)
-		{
-			// Use SnapToTarget to maintain the socket's transform
-			FAttachmentTransformRules AttachRules(EAttachmentRule::SnapToTarget, EAttachmentRule::SnapToTarget, EAttachmentRule::SnapToTarget, true);
-			LeftKatana->AttachToComponent(GetMesh(), AttachRules, LeftHandSocketName);
-			
-			// Ensure collision is disabled
-			LeftKatana->SetActorEnableCollision(false);
-			
-			// Log attachment result
-			if (LeftKatana->GetAttachParentActor() == this)
-			{
-				UE_LOG(LogTemplateCharacter, Log, TEXT("Left katana successfully attached to socket: %s"), *LeftHandSocketName.ToString());
-			}
-			else
-			{
-				UE_LOG(LogTemplateCharacter, Warning, TEXT("Failed to attach left katana to socket: %s"), *LeftHandSocketName.ToString());
-			}
-		}
-	}
-	else
-	{
-		UE_LOG(LogTemplateCharacter, Warning, TEXT("LeftKatanaClass not set in Blueprint! Please set it to BP_OverrideKatana"));
-	}
-
-	// Spawn right katana (physical damage)
-	if (RightKatanaClass)
-	{
-		RightKatana = GetWorld()->SpawnActor<APhysicalKatana>(RightKatanaClass, GetActorLocation(), GetActorRotation(), SpawnParams);
-		if (RightKatana)
-		{
-			// Use SnapToTarget to maintain the socket's transform
-			FAttachmentTransformRules AttachRules(EAttachmentRule::SnapToTarget, EAttachmentRule::SnapToTarget, EAttachmentRule::SnapToTarget, true);
-			RightKatana->AttachToComponent(GetMesh(), AttachRules, RightHandSocketName);
-			
-			// Ensure collision is disabled
-			RightKatana->SetActorEnableCollision(false);
-			
-			// Log attachment result
-			if (RightKatana->GetAttachParentActor() == this)
-			{
-				UE_LOG(LogTemplateCharacter, Log, TEXT("Right katana successfully attached to socket: %s"), *RightHandSocketName.ToString());
-			}
-			else
-			{
-				UE_LOG(LogTemplateCharacter, Warning, TEXT("Failed to attach right katana to socket: %s"), *RightHandSocketName.ToString());
-			}
-		}
-	}
-	else
-	{
-		UE_LOG(LogTemplateCharacter, Warning, TEXT("RightKatanaClass not set in Blueprint! Please set it to BP_PhysicalKatana"));
-	}
+	// Weapons will be spawned and attached via Blueprint
 	
 	// Register player's own health component for echo system (in case of self-damage or special abilities)
 	if (HealthComponent)
@@ -319,6 +270,25 @@ void ATrinityFlowCharacter::BeginPlay()
 void ATrinityFlowCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	
+	// Check if we need to cancel altar activation due to movement or combat
+	if (CurrentAltar && CurrentAltar->IsActivating())
+	{
+		// Cancel if player entered combat
+		if (StateComponent && StateComponent->HasState(ECharacterState::Combat))
+		{
+			CurrentAltar->CancelActivation();
+			CurrentAltar = nullptr;
+			UE_LOG(LogTemplateCharacter, Log, TEXT("Altar activation cancelled - entered combat"));
+		}
+		// Cancel if player moved away from altar
+		else if (!CurrentAltar->IsPlayerInZone(this))
+		{
+			CurrentAltar->CancelActivation();
+			CurrentAltar = nullptr;
+			UE_LOG(LogTemplateCharacter, Log, TEXT("Altar activation cancelled - moved away"));
+		}
+	}
 
 	// Update defensive window
 	if (bDefensiveAbilityActive)
@@ -351,6 +321,11 @@ void ATrinityFlowCharacter::Tick(float DeltaTime)
 
 void ATrinityFlowCharacter::LeftKatanaAttack()
 {
+	if (IsUIBlockingInput())
+	{
+		return;
+	}
+	
 	if (AnimationComponent && !bIsAttacking && LeftKatana)
 	{
 		// Play attack animation and get montage length
@@ -372,6 +347,11 @@ void ATrinityFlowCharacter::LeftKatanaAttack()
 
 void ATrinityFlowCharacter::RightKatanaAttack()
 {
+	if (IsUIBlockingInput())
+	{
+		return;
+	}
+	
 	if (AnimationComponent && !bIsAttacking && RightKatana)
 	{
 		// Play attack animation and get montage length
@@ -429,9 +409,24 @@ void ATrinityFlowCharacter::AbilityE()
 	// Check if we're in non-combat state
 	if (StateComponent && !StateComponent->HasState(ECharacterState::Combat))
 	{
-		// In non-combat state - play interaction animation through AnimationComponent
-		if (AnimationComponent)
+		// In non-combat state - check for altar interaction first
+		CheckForNearbyAltar();
+		
+		if (CurrentAltar && CurrentAltar->CanActivate(this))
 		{
+			// Open the shard activation UI instead of auto-activating
+			if (APlayerController* PC = Cast<APlayerController>(GetController()))
+			{
+				if (ATrinityFlowHUD* HUD = Cast<ATrinityFlowHUD>(PC->GetHUD()))
+				{
+					HUD->OpenShardActivationUI(CurrentAltar);
+					UE_LOG(LogTemplateCharacter, Log, TEXT("Opening shard activation UI"));
+				}
+			}
+		}
+		else if (AnimationComponent)
+		{
+			// No altar nearby - just play interaction animation
 			if (AnimationComponent->PlayInteractionMontage())
 			{
 				UE_LOG(LogTemplateCharacter, Log, TEXT("Playing interaction montage"));
@@ -533,6 +528,11 @@ void ATrinityFlowCharacter::LeftDefensiveAbility()
 
 void ATrinityFlowCharacter::RightDefensiveAbility()
 {
+	if (IsUIBlockingInput())
+	{
+		return;
+	}
+	
 	// Check if animation is locked (only for combat actions)
 	if (StateComponent && StateComponent->HasState(ECharacterState::Combat))
 	{
@@ -656,3 +656,40 @@ void ATrinityFlowCharacter::OnStateChanged(ECharacterState NewState)
 		UE_LOG(LogTemplateCharacter, Log, TEXT("Combat state changed: %s"), bInCombat ? TEXT("In Combat") : TEXT("Out of Combat"));
 	}
 }
+
+void ATrinityFlowCharacter::CheckForNearbyAltar()
+{
+	// Clear current altar first
+	CurrentAltar = nullptr;
+	
+	// Find all altars in the world
+	TArray<AActor*> FoundAltars;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AShardAltar::StaticClass(), FoundAltars);
+	
+	// Check if player is in any altar's interaction zone
+	for (AActor* Actor : FoundAltars)
+	{
+		if (AShardAltar* Altar = Cast<AShardAltar>(Actor))
+		{
+			if (Altar->IsPlayerInZone(this))
+			{
+				CurrentAltar = Altar;
+				break;
+			}
+		}
+	}
+}
+
+bool ATrinityFlowCharacter::IsUIBlockingInput() const
+{
+	if (APlayerController* PC = Cast<APlayerController>(GetController()))
+	{
+		if (ATrinityFlowHUD* HUD = Cast<ATrinityFlowHUD>(PC->GetHUD()))
+		{
+			return HUD->IsShardActivationUIOpen();
+		}
+	}
+	return false;
+}
+
+// Removed unused altar interaction methods - now handled directly in AbilityE()

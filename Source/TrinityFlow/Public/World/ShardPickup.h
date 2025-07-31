@@ -2,7 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "TrinityFlowTypes.h"
+#include "Core/TrinityFlowTypes.h"
 #include "ShardPickup.generated.h"
 
 class USphereComponent;

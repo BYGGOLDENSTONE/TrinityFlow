@@ -1,7 +1,7 @@
 # Shard System Setup Guide
 
 ## Overview
-The shard system allows players to collect shards and activate them at altars to change their stance, affecting damage modifiers.
+The shard system allows players to collect shards and selectively activate them at altars to change their stance, affecting damage modifiers. Players can choose exactly how many shards of each type to activate, giving them strategic control over their character build.
 
 ## Blueprint Setup
 
@@ -24,28 +24,26 @@ The shard system allows players to collect shards and activate them at altars to
    - Set `ShardType` to `Power`
    - Use different colored mesh/material
 
-### 2. Create Shard Altar Blueprints
+### 2. Create Shard Altar Blueprint
 
 1. Create new Blueprint class:
    - Parent: `AShardAltar`
-   - Name: `BP_ShardAltar_Soul`
+   - Name: `BP_ShardAltar_Universal`
    
 2. In the Blueprint:
-   - Set `AltarType` to `Soul`
+   - Set `bAcceptsBothTypes` to `true` (default)
    - Configure altar settings:
-     - Max Shards Per Activation: 5
+     - Max Shards Per Activation: 99 (no practical limit)
      - Min Shards To Activate: 1
-     - Puzzle Type: `HoldToActivate` (3 seconds)
+     - Puzzle Type: `HoldToActivate` (2 seconds)
    - Set up altar mesh (pedestal, shrine, etc.)
    
-3. Duplicate for Power altars:
-   - Name: `BP_ShardAltar_Power`
-   - Set `AltarType` to `Power`
+3. The altar now accepts both Soul and Power shards in a single interaction
 
 ### 3. Place in Level
 
-1. Place several shard pickups around the level
-2. Place at least one altar of each type
+1. Place several shard pickups around the level (mix of Soul and Power)
+2. Place universal altars at strategic locations
 3. Optional: Add guardian enemies to altar's `GuardianEnemies` array
 
 ## Testing the System
@@ -70,20 +68,37 @@ ShowShards
    - Shard disappears with effects
    - Inactive shard count increases
 
-2. **Activating at Altar**:
-   - Approach altar with shards
-   - Hold interact button for 3 seconds
-   - Shards move from inactive to active
-   - Stance updates automatically
+2. **Activating at Altar (Interactive UI)**:
+   - Approach altar with inactive shards
+   - Press E to open shard activation UI
+   - UI shows full-screen panel with:
+     - Current active/inactive shard counts
+     - Two sections for Soul and Power shards
+     - Selected section highlighted in yellow
+   - Controls:
+     - A/D: Switch between Soul/Power shard selection
+     - W/S: Increase/Decrease activation amount
+     - E: Confirm and activate selected shards
+     - Q: Cancel and close UI
+   - Player movement and combat are disabled while UI is open
+   - After activation, shards move from inactive to active
+   - Stance updates based on new active shard totals
 
 3. **Stance Changes**:
    - Power > Soul shards = Power stance (+15% physical damage)
    - Soul > Power shards = Soul stance (+15% soul damage)
    - Equal shards = Balanced stance (+10% both damages)
 
-## UI Integration Points
+## UI Integration
 
-The system fires these events for UI updates:
+### HUD Display
+The C++ HUD system displays:
+- Player info section shows:
+  - Current stance and damage bonuses
+  - Active/Inactive shard counts for both types
+- Interactive altar UI provides full shard management
+
+### System Events
 
 1. **ShardComponent Events**:
    - `OnShardCollected(ShardType, NewInactiveCount)`
@@ -95,22 +110,36 @@ The system fires these events for UI updates:
 3. **Altar Events**:
    - `OnAltarInteractionStarted(Interactor)`
    - `OnAltarInteractionEnded()`
-   - `OnAltarActivated(ShardType, ShardsActivated, Activator)`
+   - `OnAltarActivated(SoulShardsActivated, PowerShardsActivated, Activator)`
+
+## Implementation Notes
+
+### Key Features
+1. **Selective Activation**: Players choose exactly how many shards to activate
+2. **Strategic Stance Control**: Save shards for later to maintain desired stance
+3. **Universal Altars**: One altar type accepts both shard types
+4. **Input Isolation**: Movement/combat disabled during UI interaction
+5. **Visual Feedback**: Real-time stance preview before activation
+
+### Technical Details
+- All UI implemented in C++ (TrinityFlowHUD)
+- No Blueprint widgets required
+- Input handled through character class filtering
+- Supports keyboard-only interaction (no mouse needed)
 
 ## Next Steps
 
-1. Create UI widgets to display:
-   - Active/Inactive shard counts
-   - Current stance indicator
-   - Altar interaction progress
-
-2. Add visual effects:
+1. Add visual effects:
    - Shard collection particles
    - Altar activation effects
    - Stance change effects
 
-3. Implement remaining puzzle types:
-   - Timing challenges
-   - Pattern matching mini-games
+2. Balance considerations:
+   - Shard distribution in levels
+   - Altar placement strategy
+   - Stance bonus values
 
-4. Balance shard distribution in levels
+3. Polish:
+   - Sound effects for UI interactions
+   - Animation for shard activation
+   - Visual feedback for stance changes

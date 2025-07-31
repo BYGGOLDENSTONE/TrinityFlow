@@ -2,7 +2,49 @@
 
 All notable changes to TrinityFlow are documented in this file.
 
-## [Latest] - 2025-07-30
+## [Latest] - 2025-07-31
+
+### Added
+- **Interactive Shard Activation UI**
+  - Full-screen HUD panel for selective shard activation
+  - Players can choose exactly how many shards of each type to activate
+  - Real-time stance preview showing resulting stance before activation
+  - Keyboard-only controls with visual indicators
+  - Input isolation - movement and combat disabled during UI interaction
+
+### Changed
+- **Shard Altar System**
+  - Altars now accept both Soul and Power shards in single interaction
+  - Removed separate altar types - all altars are universal
+  - Added `StartSelectiveActivation()` method for specific shard counts
+  - Simplified altar interaction from auto-activation to UI-based selection
+
+- **HUD System Updates**
+  - Added player info section showing stance and shard counts
+  - Moved health bar higher to avoid UI overlap
+  - Altar interaction now opens selection UI instead of progress bar
+  - Input handling through character class filtering instead of input modes
+
+- **Controls**
+  - E key: Open altar UI (when near altar) or activate shards (when UI open)
+  - A/D: Switch between Soul/Power shard selection
+  - W/S: Increase/Decrease shard amount
+  - Q: Cancel and close UI
+  - All movement and combat blocked during altar interaction
+
+### Fixed
+- **Input System**
+  - Fixed input blocking issues with FInputModeUIOnly
+  - Implemented custom input filtering in character class
+  - Movement and camera controls properly disabled during UI interaction
+  - UI-specific inputs work without affecting gameplay
+
+### Technical Details
+- All UI implemented in C++ (no Blueprint widgets required)
+- Selective activation allows strategic stance management
+- Players can save shards for future use at other altars
+
+## [Previous] - 2025-07-30
 
 ### Added
 - **Shard System Implementation**

@@ -38,17 +38,17 @@ public:
     FOnStanceChanged OnStanceChanged;
 
 protected:
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stance")
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stance")
     EStanceType CurrentStance;
 
     // Placeholder for future implementation
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stance")
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stance", meta = (ClampMin = "0.0", ClampMax = "1.0"))
     float PowerStancePhysicalBonus = 0.15f;
 
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stance")
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stance", meta = (ClampMin = "0.0", ClampMax = "1.0"))
     float SoulStanceSoulBonus = 0.15f;
 
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stance")
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stance", meta = (ClampMin = "0.0", ClampMax = "1.0"))
     float BalancedStanceBothBonus = 0.10f;
 
 private:

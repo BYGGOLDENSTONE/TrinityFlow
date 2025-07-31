@@ -57,13 +57,20 @@ bool AShardAltar::CanActivate(AActor* Interactor) const
         return false;
     }
 
-    // Check if interactor has shards
+    // Check if interactor has any shards (either type)
     if (UShardComponent* ShardComp = Interactor->FindComponentByClass<UShardComponent>())
     {
-        return ShardComp->GetInactiveShardCount(AltarType) >= MinShardsToActivate;
+        int32 TotalInactive = ShardComp->GetInactiveShardCount(EShardType::Soul) + 
+                              ShardComp->GetInactiveShardCount(EShardType::Power);
+        return TotalInactive >= MinShardsToActivate;
     }
 
     return false;
+}
+
+bool AShardAltar::IsPlayerInZone(AActor* Player) const
+{
+    return Player && OverlappingActors.Contains(Player);
 }
 
 int32 AShardAltar::GetAvailableShards(AActor* Interactor) const
@@ -75,7 +82,9 @@ int32 AShardAltar::GetAvailableShards(AActor* Interactor) const
 
     if (UShardComponent* ShardComp = Interactor->FindComponentByClass<UShardComponent>())
     {
-        return ShardComp->GetInactiveShardCount(AltarType);
+        // Return total inactive shards of both types
+        return ShardComp->GetInactiveShardCount(EShardType::Soul) + 
+               ShardComp->GetInactiveShardCount(EShardType::Power);
     }
 
     return 0;
@@ -112,6 +121,7 @@ void AShardAltar::CancelActivation()
     if (bIsActivating)
     {
         bIsActivating = false;
+        bIsSelectiveActivation = false;
         ActivationTimer = 0.0f;
         
         OnAltarInteractionEnded.Broadcast();
@@ -120,6 +130,8 @@ void AShardAltar::CancelActivation()
         CurrentInteractor = nullptr;
         InteractorShardComponent = nullptr;
         PendingShardsToActivate = 0;
+        PendingSoulShardsToActivate = 0;
+        PendingPowerShardsToActivate = 0;
     }
 }
 
@@ -160,23 +172,91 @@ void AShardAltar::OnOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor*
     }
 }
 
+void AShardAltar::StartSelectiveActivation(AActor* Interactor, int32 SoulShardsToActivate, int32 PowerShardsToActivate)
+{
+    if (!Interactor || bIsActivating)
+    {
+        return;
+    }
+    
+    // Check if player has enough shards
+    UShardComponent* ShardComp = Interactor->FindComponentByClass<UShardComponent>();
+    if (!ShardComp)
+    {
+        return;
+    }
+    
+    int32 InactiveSoul = ShardComp->GetInactiveShardCount(EShardType::Soul);
+    int32 InactivePower = ShardComp->GetInactiveShardCount(EShardType::Power);
+    
+    // Clamp to available shards
+    PendingSoulShardsToActivate = FMath::Clamp(SoulShardsToActivate, 0, InactiveSoul);
+    PendingPowerShardsToActivate = FMath::Clamp(PowerShardsToActivate, 0, InactivePower);
+    
+    if (PendingSoulShardsToActivate == 0 && PendingPowerShardsToActivate == 0)
+    {
+        return;
+    }
+    
+    CurrentInteractor = Interactor;
+    InteractorShardComponent = ShardComp;
+    bIsActivating = true;
+    bIsSelectiveActivation = true;
+    ActivationTimer = 0.0f;
+    
+    OnAltarInteractionStarted.Broadcast(Interactor);
+    OnActivationStarted(Interactor);
+    
+    // If no puzzle, activate immediately
+    if (PuzzleType == EAltarPuzzleType::None)
+    {
+        CompleteSelectiveActivation();
+    }
+}
+
 void AShardAltar::CompleteActivation()
 {
+    if (bIsSelectiveActivation)
+    {
+        CompleteSelectiveActivation();
+        return;
+    }
+    
     if (!CurrentInteractor || !InteractorShardComponent)
     {
         CancelActivation();
         return;
     }
 
-    // Activate the shards
-    if (InteractorShardComponent->ActivateShards(AltarType, PendingShardsToActivate))
+    // Activate all inactive shards of both types
+    int32 SoulShardsActivated = 0;
+    int32 PowerShardsActivated = 0;
+    
+    // Get inactive counts
+    int32 InactiveSoul = InteractorShardComponent->GetInactiveShardCount(EShardType::Soul);
+    int32 InactivePower = InteractorShardComponent->GetInactiveShardCount(EShardType::Power);
+    
+    // Activate all soul shards
+    if (InactiveSoul > 0)
     {
-        OnAltarActivated.Broadcast(AltarType, PendingShardsToActivate, CurrentInteractor);
-        OnActivationCompleted(CurrentInteractor, PendingShardsToActivate);
+        InteractorShardComponent->ActivateShards(EShardType::Soul, InactiveSoul);
+        SoulShardsActivated = InactiveSoul;
+    }
+    
+    // Activate all power shards
+    if (InactivePower > 0)
+    {
+        InteractorShardComponent->ActivateShards(EShardType::Power, InactivePower);
+        PowerShardsActivated = InactivePower;
+    }
+    
+    if (SoulShardsActivated > 0 || PowerShardsActivated > 0)
+    {
+        OnAltarActivated.Broadcast(SoulShardsActivated, PowerShardsActivated, CurrentInteractor);
+        OnActivationCompleted(CurrentInteractor, SoulShardsActivated + PowerShardsActivated);
         
-        UE_LOG(LogTemp, Log, TEXT("Altar activated! %d %s shards activated."),
-            PendingShardsToActivate,
-            AltarType == EShardType::Soul ? TEXT("Soul") : TEXT("Power"));
+        UE_LOG(LogTemp, Log, TEXT("Altar activated! Soul: %d, Power: %d shards activated."),
+            SoulShardsActivated, PowerShardsActivated);
     }
     else
     {
@@ -189,6 +269,57 @@ void AShardAltar::CompleteActivation()
     CurrentInteractor = nullptr;
     InteractorShardComponent = nullptr;
     PendingShardsToActivate = 0;
+    
+    OnAltarInteractionEnded.Broadcast();
+}
+
+void AShardAltar::CompleteSelectiveActivation()
+{
+    if (!CurrentInteractor || !InteractorShardComponent)
+    {
+        CancelActivation();
+        return;
+    }
+    
+    int32 SoulShardsActivated = 0;
+    int32 PowerShardsActivated = 0;
+    
+    // Activate soul shards
+    if (PendingSoulShardsToActivate > 0)
+    {
+        InteractorShardComponent->ActivateShards(EShardType::Soul, PendingSoulShardsToActivate);
+        SoulShardsActivated = PendingSoulShardsToActivate;
+    }
+    
+    // Activate power shards
+    if (PendingPowerShardsToActivate > 0)
+    {
+        InteractorShardComponent->ActivateShards(EShardType::Power, PendingPowerShardsToActivate);
+        PowerShardsActivated = PendingPowerShardsToActivate;
+    }
+    
+    if (SoulShardsActivated > 0 || PowerShardsActivated > 0)
+    {
+        OnAltarActivated.Broadcast(SoulShardsActivated, PowerShardsActivated, CurrentInteractor);
+        OnActivationCompleted(CurrentInteractor, SoulShardsActivated + PowerShardsActivated);
+        
+        UE_LOG(LogTemp, Log, TEXT("Selective altar activation! Soul: %d, Power: %d shards activated."),
+            SoulShardsActivated, PowerShardsActivated);
+    }
+    else
+    {
+        OnActivationFailed(CurrentInteractor);
+    }
+    
+    // Reset state
+    bIsActivating = false;
+    bIsSelectiveActivation = false;
+    ActivationTimer = 0.0f;
+    CurrentInteractor = nullptr;
+    InteractorShardComponent = nullptr;
+    PendingShardsToActivate = 0;
+    PendingSoulShardsToActivate = 0;
+    PendingPowerShardsToActivate = 0;
     
     OnAltarInteractionEnded.Broadcast();
 }

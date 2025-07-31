@@ -26,6 +26,14 @@ struct FFloatingDamageNumber
     }
 };
 
+UENUM()
+enum class EShardActivationUIState : uint8
+{
+    Closed,
+    SelectingShardType,
+    InputtingAmount
+};
+
 UCLASS()
 class TRINITYFLOW_API ATrinityFlowHUD : public AHUD
 {
@@ -42,6 +50,16 @@ public:
     void OnDamageDealt(AActor* DamagedActor, float ActualDamage, AActor* DamageInstigator, EDamageType DamageType);
 
     void AddFloatingDamageNumber(const FVector& Location, float Damage, bool bIsEcho = false);
+    
+    // Shard Activation UI
+    UFUNCTION()
+    void OpenShardActivationUI(class AShardAltar* Altar);
+    
+    UFUNCTION()
+    void CloseShardActivationUI();
+    
+    UFUNCTION()
+    bool IsShardActivationUIOpen() const { return ShardActivationUIState != EShardActivationUIState::Closed; }
 
 protected:
     void DrawHealthBar();
@@ -53,10 +71,20 @@ protected:
     void DrawWeaponInfo();
     void DrawNearbyEnemies();
     void DrawFloatingDamageNumbers();
+    void DrawAltarInteractionUI();
+    void DrawShardActivationPanel();
+    
+    bool IsNearAltar() const;
+    class AShardAltar* GetNearbyAltar() const;
 
     void DrawBar(float X, float Y, float Width, float Height, float Percentage, FLinearColor Color);
     FString GetTagsString(ECharacterTag InTags);
     FString GetStatesString(ECharacterState InStates);
+    
+    // Shard Activation UI Helpers
+    void ProcessShardActivation();
+    void UpdateStancePreview();
+    EStanceType CalculateStanceFromShards(int32 SoulActive, int32 PowerActive) const;
 
     UPROPERTY()
     class ATrinityFlowCharacter* PlayerCharacter;
@@ -73,4 +101,29 @@ protected:
     
     // Floating damage numbers
     TArray<FFloatingDamageNumber> FloatingDamageNumbers;
+    
+    // Altar UI
+    UPROPERTY()
+    class AShardAltar* NearbyAltar = nullptr;
+    
+    // Shard Activation UI State
+    EShardActivationUIState ShardActivationUIState = EShardActivationUIState::Closed;
+    UPROPERTY()
+    class AShardAltar* ActiveAltar = nullptr;
+    
+    // Selected shard type (true = Soul, false = Power)
+    bool bSelectingSoulShards = true;
+    
+    // Input amounts
+    FString SoulShardInput = "0";
+    FString PowerShardInput = "0";
+    
+    // Current input string
+    FString* CurrentInputString = nullptr;
+    
+    // Cached shard counts
+    int32 CachedSoulActive = 0;
+    int32 CachedSoulInactive = 0;
+    int32 CachedPowerActive = 0;
+    int32 CachedPowerInactive = 0;
 };

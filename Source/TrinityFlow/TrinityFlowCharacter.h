@@ -140,6 +140,9 @@ protected:
 
 	/** Called for looking input */
 	void Look(const FInputActionValue& Value);
+	
+	/** Helper to check if UI is blocking input */
+	bool IsUIBlockingInput() const;
 
 	/** Called for attack input */
 	void LeftKatanaAttack();   // LMB - Soul damage
@@ -202,19 +205,13 @@ protected:
 	float PendingDamage = 0.0f;
 	EDamageType PendingDamageType = EDamageType::Physical;
 	
-	/** Socket Configuration */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon Sockets")
-	FName LeftHandSocketName = TEXT("socket_weapon_l");
+	// Weapon attachment is handled in Blueprint
 	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon Sockets")
-	FName RightHandSocketName = TEXT("socket_weapon_r");
+	// Altar Interaction
+	UPROPERTY()
+	class AShardAltar* CurrentAltar = nullptr;
 	
-	/** Weapon Blueprint Classes */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon Classes")
-	TSubclassOf<class AOverrideKatana> LeftKatanaClass;
-	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon Classes")
-	TSubclassOf<class APhysicalKatana> RightKatanaClass;
+	void CheckForNearbyAltar();
 
 protected:
 

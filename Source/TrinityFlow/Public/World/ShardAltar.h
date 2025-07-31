@@ -2,7 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "TrinityFlowTypes.h"
+#include "Core/TrinityFlowTypes.h"
 #include "ShardAltar.generated.h"
 
 class UBoxComponent;
@@ -10,7 +10,7 @@ class UStaticMeshComponent;
 class UShardComponent;
 class AActor;
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnAltarActivated, EShardType, ShardType, int32, ShardsActivated, AActor*, Activator);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnAltarActivated, int32, SoulShardsActivated, int32, PowerShardsActivated, AActor*, Activator);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAltarInteractionStarted, AActor*, Interactor);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAltarInteractionEnded);
 
@@ -34,9 +34,9 @@ public:
     virtual void BeginPlay() override;
     virtual void Tick(float DeltaTime) override;
 
-    // Altar Configuration
+    // Altar Configuration - Now accepts both shard types
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Altar")
-    EShardType AltarType = EShardType::Power;
+    bool bAcceptsBothTypes = true;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Altar")
     int32 MaxShardsPerActivation = 5;
@@ -45,11 +45,12 @@ public:
     int32 MinShardsToActivate = 1;
 
     // Puzzle Configuration
+    // Simplified to always use 2-second hold after interaction
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Puzzle")
-    EAltarPuzzleType PuzzleType = EAltarPuzzleType::None;
+    EAltarPuzzleType PuzzleType = EAltarPuzzleType::HoldToActivate;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Puzzle", meta = (EditCondition = "PuzzleType == EAltarPuzzleType::HoldToActivate"))
-    float HoldDuration = 3.0f;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Puzzle")
+    float HoldDuration = 2.0f;
 
     // Guardian Enemies
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Guardians")
@@ -78,12 +79,18 @@ public:
     // Interaction Interface
     UFUNCTION(BlueprintCallable, Category = "Altar")
     bool CanActivate(AActor* Interactor) const;
+    
+    UFUNCTION(BlueprintCallable, Category = "Altar")
+    bool IsPlayerInZone(AActor* Player) const;
 
     UFUNCTION(BlueprintCallable, Category = "Altar")
     int32 GetAvailableShards(AActor* Interactor) const;
 
     UFUNCTION(BlueprintCallable, Category = "Altar")
     void StartActivation(AActor* Interactor, int32 ShardsToActivate);
+    
+    UFUNCTION(BlueprintCallable, Category = "Altar")
+    void StartSelectiveActivation(AActor* Interactor, int32 SoulShardsToActivate, int32 PowerShardsToActivate);
 
     UFUNCTION(BlueprintCallable, Category = "Altar")
     void CancelActivation();
@@ -126,10 +133,16 @@ private:
     bool bIsActivating = false;
     float ActivationTimer = 0.0f;
     int32 PendingShardsToActivate = 0;
+    
+    // Selective activation tracking
+    int32 PendingSoulShardsToActivate = 0;
+    int32 PendingPowerShardsToActivate = 0;
+    bool bIsSelectiveActivation = false;
 
     TSet<AActor*> OverlappingActors;
 
     void CompleteActivation();
+    void CompleteSelectiveActivation();
     bool AreGuardiansDefeated() const;
     void UpdateActivationProgress(float DeltaTime);
 };

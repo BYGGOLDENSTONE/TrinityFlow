@@ -72,9 +72,7 @@ protected:
     UPROPERTY(EditDefaultsOnly, Category = "Timing", meta = (DisplayName = "Wondering Delay", ClampMin = "1.0", ClampMax = "10.0"))
     float WonderingDelay = 5.0f;
     
-    // Attack Animation Settings
-    UPROPERTY(EditDefaultsOnly, Category = "Combat", meta = (DisplayName = "Attack Animation Speed Scale", ClampMin = "0.1", ClampMax = "2.0"))
-    float AttackAnimationSpeedScale = 1.0f;
+    // Attack animations will play at their natural speed
 
     UPROPERTY()
     FTimerHandle WonderingTimerHandle;
