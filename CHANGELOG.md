@@ -4,6 +4,44 @@ All notable changes to TrinityFlow are documented in this file.
 
 ## [Latest] - 2025-08-02
 
+### Added
+- **Stance Flow System**: Replaced shard-based stance system with dynamic combat flow
+  - Flow bar UI that responds to attack patterns
+  - Left attacks move indicator toward Soul Stance (0-20%)
+  - Right attacks move indicator toward Power Stance (80-100%)
+  - Alternating attacks maintain Balanced Stance (40-60%)
+  - Consecutive same-side attacks accelerate stance changes
+  - Flow speed increased to 0.15 per attack for more responsive changes
+- **Defense Timing Visual Feedback**: 
+  - Timing bar now appears above attacking enemy's head
+  - Players can use defensive abilities anytime (not restricted to timing window)
+  - Timing window provides damage reduction bonuses but is optional
+- **Cinematic Camera Effects**:
+  - Camera shake on attacks (light/medium/heavy based on damage)
+  - Camera bump effects when taking damage
+  - Perlin noise-based shake for natural movement
+
+### Changed
+- Defense abilities can now be activated anytime during combat
+- Timing windows are for bonus effects only, not requirements
+- Removed all shard stance dependencies - shards now only provide damage bonuses
+- HUD now shows actual stance from StanceComponent, not shard-based calculation
+- Altar UI shows damage bonus percentages instead of stance changes
+- Stance bar positioned higher on screen (180px from bottom)
+
+### Fixed
+- Stance no longer changes when activating shards at altars
+- Stance properly updates when flow position reaches stance zones
+- HUD stance display now reflects actual combat stance, not shard counts
+
+### Removed
+- Shard-based stance switching system
+- Center-screen defense timing bar (moved to enemy position)
+- Outdated documentation files (SHARD_SYSTEM_SETUP.md, IMPLEMENTATION_PLAN.md)
+- Stance preview from altar activation UI
+
+## [Previous] - 2025-08-02
+
 ### Changed
 - **UI Architecture Consolidation**
   - Removed redundant `ATrinityFlowHUD` class

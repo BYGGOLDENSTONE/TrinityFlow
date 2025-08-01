@@ -68,7 +68,7 @@ public:
     float BasicAttackSpeed = 1.0f; // Attacks per second
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Basic Attack")
-    EDamageType BasicDamageType = EDamageType::Physical;
+    EDamageType BasicDamageType = EDamageType::Soul;
 
     // Ability Cooldowns
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Abilities")

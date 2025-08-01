@@ -29,6 +29,7 @@
 #include "World/ShardAltar.h"
 #include "TrinityFlowGameMode.h"
 #include "UI/TrinityFlowUIManager.h"
+#include "Camera/CameraShakeComponent.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -89,6 +90,7 @@ ATrinityFlowCharacter::ATrinityFlowCharacter()
 	AnimationComponent = CreateDefaultSubobject<UAnimationComponent>(TEXT("AnimationComponent"));
 	StanceComponent = CreateDefaultSubobject<UStanceComponent>(TEXT("StanceComponent"));
 	ShardComponent = CreateDefaultSubobject<UShardComponent>(TEXT("ShardComponent"));
+	CameraShakeComponent = CreateDefaultSubobject<UCameraShakeComponent>(TEXT("CameraShakeComponent"));
 
 	PrimaryActorTick.bCanEverTick = true;
 }
@@ -405,6 +407,15 @@ void ATrinityFlowCharacter::Tick(float DeltaTime)
 			// Window expired, take full damage
 			bDefensiveAbilityActive = false;
 			
+			// Hide timing bar
+			if (UGameInstance* GameInstance = GetGameInstance())
+			{
+				if (UTrinityFlowUIManager* UIManager = GameInstance->GetSubsystem<UTrinityFlowUIManager>())
+				{
+					UIManager->HideDefenseTiming();
+				}
+			}
+			
 			if (HealthComponent && PendingDamage > 0.0f)
 			{
 				FDamageInfo DamageInfo;
@@ -451,6 +462,18 @@ void ATrinityFlowCharacter::Tick(float DeltaTime)
 				{
 					bool bInCombat = StateComponent->HasState(ECharacterState::Combat);
 					UIManager->UpdateCombatState(bInCombat);
+					
+					// Update stance flow bar
+					if (bInCombat && StanceComponent)
+					{
+						float FlowPosition = StanceComponent->GetFlowPosition();
+						UIManager->ShowStanceBar();
+						UIManager->UpdateStanceBar(FlowPosition);
+					}
+					else
+					{
+						UIManager->HideStanceBar();
+					}
 				}
 			}
 		}
@@ -506,6 +529,18 @@ void ATrinityFlowCharacter::LeftKatanaAttack()
 	AActor* Target = GetTargetInSight();
 	LeftKatana->BasicAttack(Target);
 	
+	// Trigger camera shake for attack
+	if (CameraShakeComponent)
+	{
+		CameraShakeComponent->TriggerCameraShake(ECameraShakeType::Light);
+	}
+	
+	// Update stance flow
+	if (StanceComponent)
+	{
+		StanceComponent->OnAttackExecuted(true); // true = left attack
+	}
+	
 	// Set timer to reset attack state
 	GetWorld()->GetTimerManager().SetTimer(AttackResetTimer, this, &ATrinityFlowCharacter::OnAttackComplete, MontageLength, false);
 	
@@ -560,6 +595,18 @@ void ATrinityFlowCharacter::RightKatanaAttack()
 	
 	AActor* Target = GetTargetInSight();
 	RightKatana->BasicAttack(Target);
+	
+	// Trigger camera shake for attack (slightly stronger for right attack)
+	if (CameraShakeComponent)
+	{
+		CameraShakeComponent->TriggerCameraShake(ECameraShakeType::Medium);
+	}
+	
+	// Update stance flow
+	if (StanceComponent)
+	{
+		StanceComponent->OnAttackExecuted(false); // false = right attack
+	}
 	
 	// Set timer to reset attack state
 	GetWorld()->GetTimerManager().SetTimer(AttackResetTimer, this, &ATrinityFlowCharacter::OnAttackComplete, MontageLength, false);
@@ -721,42 +768,82 @@ void ATrinityFlowCharacter::LeftDefensiveAbility()
 	// Shift key - Scripted Dodge for left katana
 	if (StateComponent && StateComponent->HasState(ECharacterState::Combat))
 	{
-		if (bDefensiveAbilityActive && LeftKatana)
+		if (LeftKatana)
 		{
-			// Let the katana handle its defensive ability
-			LeftKatana->StartDodgeWindow(PendingDamage, PendingAttacker);
-			
-			// Process the dodge
-			float DamageMultiplier = 1.0f;
-			if (LeftKatana->ProcessDodge(DamageMultiplier))
+			// Check if defensive window is active for timing-based damage reduction
+			if (bDefensiveAbilityActive)
 			{
-				// Perfect dodge
-				LeftKatana->OnPerfectDodge();
-			}
-			
-			// Apply damage if any
-			if (HealthComponent && DamageMultiplier > 0.0f && PendingDamage > 0.0f)
-			{
-				FDamageInfo DamageInfo;
-				DamageInfo.Amount = PendingDamage * DamageMultiplier;
-				DamageInfo.Type = PendingDamageType;
-				DamageInfo.Instigator = PendingAttacker;
+				// Let the katana handle its defensive ability
+				LeftKatana->StartDodgeWindow(PendingDamage, PendingAttacker);
 				
-				FVector DamageDirection = PendingAttacker ? (GetActorLocation() - PendingAttacker->GetActorLocation()).GetSafeNormal() : FVector::ForwardVector;
-				HealthComponent->TakeDamage(DamageInfo, DamageDirection);
+				// Process the dodge based on timing
+				float DamageMultiplier = 1.0f;
+				bool bIsPerfect = DefensiveWindowTimer >= 1.0f && DefensiveWindowTimer <= 1.5f;
+				bool bIsModerate = DefensiveWindowTimer >= 0.5f && DefensiveWindowTimer < 1.0f;
+				
+				if (bIsPerfect)
+				{
+					// Perfect dodge
+					DamageMultiplier = 0.0f; // No damage
+					LeftKatana->OnPerfectDodge();
+					UE_LOG(LogTemplateCharacter, Log, TEXT("Perfect Dodge! No damage taken"));
+				}
+				else if (bIsModerate)
+				{
+					// Moderate dodge
+					DamageMultiplier = 0.5f; // 50% damage
+					UE_LOG(LogTemplateCharacter, Log, TEXT("Moderate Dodge! 50%% damage reduction"));
+				}
+				else
+				{
+					// Failed dodge (too early)
+					DamageMultiplier = 1.0f; // Full damage
+					UE_LOG(LogTemplateCharacter, Log, TEXT("Failed Dodge! Too early - full damage"));
+				}
+				
+				// Apply damage if any
+				if (HealthComponent && DamageMultiplier > 0.0f && PendingDamage > 0.0f)
+				{
+					FDamageInfo DamageInfo;
+					DamageInfo.Amount = PendingDamage * DamageMultiplier;
+					DamageInfo.Type = PendingDamageType;
+					DamageInfo.Instigator = PendingAttacker;
+					
+					FVector DamageDirection = PendingAttacker ? (GetActorLocation() - PendingAttacker->GetActorLocation()).GetSafeNormal() : FVector::ForwardVector;
+					HealthComponent->TakeDamage(DamageInfo, DamageDirection);
+				}
+				
+				// Reset defensive state
+				bDefensiveAbilityActive = false;
+				DefensiveWindowTimer = 0.0f;
+				PendingDamage = 0.0f;
+				PendingAttacker = nullptr;
+				
+				// Hide timing bar
+				if (UGameInstance* GameInstance = GetGameInstance())
+				{
+					if (UTrinityFlowUIManager* UIManager = GameInstance->GetSubsystem<UTrinityFlowUIManager>())
+					{
+						UIManager->HideDefenseTiming();
+					}
+				}
 			}
-			
-			// Reset defensive state
-			bDefensiveAbilityActive = false;
-			DefensiveWindowTimer = 0.0f;
-			PendingDamage = 0.0f;
-			PendingAttacker = nullptr;
+			else
+			{
+				// No defensive window active - just perform dodge animation
+				LeftKatana->DefensiveAbility();
+				UE_LOG(LogTemplateCharacter, Log, TEXT("Dodge performed outside defensive window - animation only"));
+			}
 		}
 	}
 	else
 	{
-		// Not in combat - no action
-		UE_LOG(LogTemplateCharacter, Log, TEXT("Left defensive ability only works in combat"));
+		// Not in combat - perform dash or dodge animation
+		if (LeftKatana)
+		{
+			LeftKatana->DefensiveAbility();
+			UE_LOG(LogTemplateCharacter, Log, TEXT("Dodge performed outside combat"));
+		}
 	}
 }
 
@@ -780,24 +867,23 @@ void ATrinityFlowCharacter::RightDefensiveAbility()
 	// Space key - Defensive ability based on stance
 	if (StateComponent && StateComponent->HasState(ECharacterState::Combat))
 	{
+		// Get current stance to determine which defensive ability to use
+		EStanceType CurrentStance = StanceComponent ? StanceComponent->GetCurrentStance() : EStanceType::Power;
+		bool bIsLeftHand = (CurrentStance == EStanceType::Soul);
+		
+		// For Balanced stance, use Power stance animations temporarily
+		if (CurrentStance == EStanceType::Balanced)
+		{
+			bIsLeftHand = false;
+		}
+		
 		if (bDefensiveAbilityActive)
 		{
-			// Get current stance to determine which defensive ability to use
-			EStanceType CurrentStance = StanceComponent ? StanceComponent->GetCurrentStance() : EStanceType::Power;
-			
 			// Check timing for perfect/moderate/failed defense
-			float TotalWindow = AnimationComponent ? AnimationComponent->GetTotalDefenseWindow() : 1.0f;
-			float PerfectWindow = AnimationComponent ? AnimationComponent->GetPerfectWindowDuration() : 0.3f;
-			
-			bool bIsPerfect = DefensiveWindowTimer <= PerfectWindow;
-			bool bIsModerate = DefensiveWindowTimer <= TotalWindow && !bIsPerfect;
-			bool bIsLeftHand = (CurrentStance == EStanceType::Soul);
-			
-			// For Balanced stance, use Power stance animations temporarily
-			if (CurrentStance == EStanceType::Balanced)
-			{
-				bIsLeftHand = false;
-			}
+			// Perfect window is the last 0.5s of the 1.5s window (1.0s - 1.5s)
+			bool bIsPerfect = DefensiveWindowTimer >= 1.0f && DefensiveWindowTimer <= 1.5f;
+			bool bIsModerate = DefensiveWindowTimer >= 0.5f && DefensiveWindowTimer < 1.0f;
+			bool bIsTooEarly = DefensiveWindowTimer < 0.5f;
 			
 			if (bIsPerfect || bIsModerate)
 			{
@@ -901,6 +987,41 @@ void ATrinityFlowCharacter::RightDefensiveAbility()
 			DefensiveWindowTimer = 0.0f;
 			PendingDamage = 0.0f;
 			PendingAttacker = nullptr;
+			
+			// Hide timing bar
+			if (UGameInstance* GameInstance = GetGameInstance())
+			{
+				if (UTrinityFlowUIManager* UIManager = GameInstance->GetSubsystem<UTrinityFlowUIManager>())
+				{
+					UIManager->HideDefenseTiming();
+				}
+			}
+		}
+		else
+		{
+			// No defensive window active - just perform defense animation and activate ability
+			if (AnimationComponent)
+			{
+				AnimationComponent->PlayDefensiveAnimation(bIsLeftHand, false);
+			}
+			
+			// Use the appropriate katana's defensive ability
+			if (CurrentStance == EStanceType::Soul && LeftKatana)
+			{
+				LeftKatana->DefensiveAbility();
+			}
+			else if (CurrentStance == EStanceType::Power && RightKatana)
+			{
+				RightKatana->DefensiveAbility();
+			}
+			else if (CurrentStance == EStanceType::Balanced)
+			{
+				// Balanced stance - activate both defensive abilities
+				if (LeftKatana) LeftKatana->DefensiveAbility();
+				if (RightKatana) RightKatana->DefensiveAbility();
+			}
+			
+			UE_LOG(LogTemplateCharacter, Log, TEXT("Defense ability used outside defensive window - animation only"));
 		}
 	}
 	else
@@ -919,6 +1040,18 @@ void ATrinityFlowCharacter::OnIncomingAttack(AActor* Attacker, float Damage, EDa
 	PendingDamage = Damage;
 	PendingDamageType = DamageType;
 	DefensiveDamageMultiplier = 1.0f;
+	
+	// Show timing bar UI above enemy
+	if (UGameInstance* GameInstance = GetGameInstance())
+	{
+		if (UTrinityFlowUIManager* UIManager = GameInstance->GetSubsystem<UTrinityFlowUIManager>())
+		{
+			// Total window is 1.5s, perfect window is from 1.0s to 1.5s (last part)
+			UIManager->ShowDefenseTiming(Attacker, 1.5f, 1.0f, 1.5f);
+		}
+	}
+	
+	UE_LOG(LogTemplateCharacter, Log, TEXT("Incoming attack! Defensive window started"));
 }
 
 void ATrinityFlowCharacter::OnAnyDamageDealt(AActor* DamagedActor, float ActualDamage, AActor* DamageInstigator, EDamageType DamageType)
@@ -995,6 +1128,33 @@ void ATrinityFlowCharacter::OnStateChanged(ECharacterState NewState)
 
 void ATrinityFlowCharacter::OnHealthChanged(float NewHealth)
 {
+	// Check if we took damage (health decreased)
+	static float LastHealth = -1.0f;
+	if (LastHealth > 0 && NewHealth < LastHealth)
+	{
+		// Trigger camera bump when taking damage
+		if (CameraShakeComponent)
+		{
+			float DamageAmount = LastHealth - NewHealth;
+			float BumpIntensity = FMath::Clamp(DamageAmount / 20.0f, 0.5f, 2.0f); // Scale bump based on damage
+			
+			// Bump camera backward (away from damage source)
+			FVector BumpDirection = -GetActorForwardVector();
+			CameraShakeComponent->TriggerCameraBump(BumpDirection, BumpIntensity);
+			
+			// Also add shake for heavy damage
+			if (DamageAmount > 30.0f)
+			{
+				CameraShakeComponent->TriggerCameraShake(ECameraShakeType::Heavy);
+			}
+			else if (DamageAmount > 15.0f)
+			{
+				CameraShakeComponent->TriggerCameraShake(ECameraShakeType::Medium);
+			}
+		}
+	}
+	LastHealth = NewHealth;
+	
 	// Update UI with new health
 	if (UGameInstance* GameInstance = GetGameInstance())
 	{

@@ -5,8 +5,9 @@ UStanceComponent::UStanceComponent()
 {
     PrimaryComponentTick.bCanEverTick = true;
     
-    // Default to Power stance for testing
-    CurrentStance = EStanceType::Power;
+    // Default to Balanced stance
+    CurrentStance = EStanceType::Balanced;
+    FlowPosition = 0.5f; // Start at center
 }
 
 void UStanceComponent::BeginPlay()
@@ -14,6 +15,7 @@ void UStanceComponent::BeginPlay()
     Super::BeginPlay();
     
     // Initialize with current stance
+    UpdateStanceFromFlow();
     BroadcastStanceChange(CurrentStance);
 }
 
@@ -21,7 +23,18 @@ void UStanceComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActo
 {
     Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
     
-    // Placeholder for future stance-related updates
+    // Update attack pattern timer
+    if (RecentAttacks.Num() > 0)
+    {
+        TimeSinceLastAttack += DeltaTime;
+        
+        // Reset attack pattern if too much time has passed
+        if (TimeSinceLastAttack >= AttackResetTime)
+        {
+            RecentAttacks.Empty();
+            TimeSinceLastAttack = 0.0f;
+        }
+    }
 }
 
 void UStanceComponent::SetStance(EStanceType NewStance)
@@ -33,26 +46,130 @@ void UStanceComponent::SetStance(EStanceType NewStance)
     }
 }
 
-void UStanceComponent::UpdateStanceFromShards(int32 SoulShards, int32 PowerShards)
+void UStanceComponent::OnAttackExecuted(bool bIsLeftAttack)
 {
-    EStanceType NewStance = EStanceType::Balanced;
+    // Reset timer
+    TimeSinceLastAttack = 0.0f;
     
-    // Determine stance based on shard counts
-    if (PowerShards > SoulShards)
+    // Add to recent attacks
+    RecentAttacks.Add(bIsLeftAttack);
+    
+    // Keep only last 4 attacks for pattern detection
+    if (RecentAttacks.Num() > 4)
     {
-        NewStance = EStanceType::Power;
+        RecentAttacks.RemoveAt(0);
     }
-    else if (SoulShards > PowerShards)
+    
+    // Calculate flow change
+    float FlowChange = FlowSpeed;
+    
+    // Check for consecutive attacks
+    if (RecentAttacks.Num() >= 2)
     {
-        NewStance = EStanceType::Soul;
+        int32 ConsecutiveCount = 1;
+        for (int32 i = RecentAttacks.Num() - 2; i >= 0; i--)
+        {
+            if (RecentAttacks[i] == bIsLeftAttack)
+            {
+                ConsecutiveCount++;
+            }
+            else
+            {
+                break;
+            }
+        }
+        
+        // Apply multiplier for consecutive attacks (capped at 3x)
+        if (ConsecutiveCount >= 2)
+        {
+            FlowChange *= FMath::Min(ConsecutiveCount * ConsecutiveAttackMultiplier, 3.0f);
+        }
+    }
+    
+    // Apply flow change
+    if (bIsLeftAttack)
+    {
+        FlowPosition -= FlowChange; // Left moves toward soul (0.0)
     }
     else
     {
-        // Equal or within ±1 difference = Balanced
-        NewStance = EStanceType::Balanced;
+        FlowPosition += FlowChange; // Right moves toward power (1.0)
     }
     
-    SetStance(NewStance);
+    // Clamp flow position
+    FlowPosition = FMath::Clamp(FlowPosition, 0.0f, 1.0f);
+    
+    // Update stance based on flow position
+    UpdateStanceFromFlow();
+    
+    UE_LOG(LogTemp, Log, TEXT("Attack: %s, Flow: %.2f, Stance: %s, Pattern: %s"), 
+        bIsLeftAttack ? TEXT("Left") : TEXT("Right"), 
+        FlowPosition,
+        CurrentStance == EStanceType::Soul ? TEXT("Soul") : 
+        CurrentStance == EStanceType::Power ? TEXT("Power") : TEXT("Balanced"),
+        IsAlternatingPattern() ? TEXT("Alternating") : TEXT("Not Alternating"));
+}
+
+void UStanceComponent::ResetFlow()
+{
+    FlowPosition = 0.5f;
+    RecentAttacks.Empty();
+    TimeSinceLastAttack = 0.0f;
+    UpdateStanceFromFlow();
+}
+
+void UStanceComponent::UpdateStanceFromFlow()
+{
+    EStanceType NewStance = CurrentStance;
+    
+    if (FlowPosition <= 0.2f)
+    {
+        NewStance = EStanceType::Soul;
+    }
+    else if (FlowPosition >= 0.4f && FlowPosition <= 0.6f)
+    {
+        // Only enter balanced stance if using alternating pattern
+        if (IsAlternatingPattern())
+        {
+            NewStance = EStanceType::Balanced;
+        }
+        // If not alternating, don't change stance in middle zone
+    }
+    else if (FlowPosition >= 0.8f)
+    {
+        NewStance = EStanceType::Power;
+    }
+    // For transition zones (0.2-0.4 and 0.6-0.8), keep current stance
+    
+    if (NewStance != CurrentStance)
+    {
+        SetStance(NewStance);
+    }
+}
+
+bool UStanceComponent::IsAlternatingPattern() const
+{
+    if (RecentAttacks.Num() < 2)
+    {
+        return false;
+    }
+    
+    // Check if recent attacks are alternating
+    for (int32 i = 1; i < RecentAttacks.Num(); i++)
+    {
+        if (RecentAttacks[i] == RecentAttacks[i - 1])
+        {
+            // Found consecutive same-side attacks
+            if (i == 1 || i == RecentAttacks.Num() - 1)
+            {
+                // Allow one consecutive at start or end
+                continue;
+            }
+            return false;
+        }
+    }
+    
+    return true;
 }
 
 float UStanceComponent::GetDamageModifier(EDamageType DamageType) const

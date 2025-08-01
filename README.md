@@ -47,6 +47,16 @@ TrinityFlow is a fast-paced action game where players wield two distinct weapons
 - **Modular Component**: EnemyAnimationComponent manages all combat animations
 - **Blueprint Integration**: Easy montage assignment through enemy Blueprints
 
+### Shard System
+- **Collectible Shards**: Soul and Power shards found throughout levels
+- **Shard Activation**: Altars allow selective activation of collected shards
+- **Damage Bonuses**: Each active shard provides 3% damage bonus
+  - Soul shards boost soul damage
+  - Power shards boost physical damage
+  - No stance effects - purely damage enhancement
+- **Altar Interaction**: Hold E to interact, select shards with Q/E and W/S
+- **Strategic Choices**: Balance between soul and physical damage bonuses
+
 ### Tag System
 - **Shielded**: Blocks frontal physical damage
 - **Armored**: Reduces physical damage by defense percentage
@@ -59,18 +69,22 @@ TrinityFlow is a fast-paced action game where players wield two distinct weapons
 - **Berserk**: Damage and speed boost at low HP (NEW)
 - **Ethereal**: Phase shifts with vulnerability changes (NEW)
 
-### Shard System (NEW)
-- **Collectible Shards**: Soul and Power shards scattered throughout levels
-- **Shard Activation**: Altars convert inactive shards to active ones
-- **Dynamic Stances**: Active shard balance determines combat stance
-  - Power Stance: More Power shards (doubles physical shard bonus)
-  - Soul Stance: More Soul shards (doubles soul shard bonus)
-  - Balanced Stance: Equal shards (no stance bonus)
-- **Damage Bonuses**: Each active shard grants 3% damage bonus
-  - Stance bonus: Doubles the shard bonus when in matching stance
-  - Clear UI display shows shard and stance bonuses separately
-- **Guardian Challenges**: Some altars require defeating guardians
-- **Activation Puzzles**: Hold-to-activate, timing, and pattern matching
+### Stance Flow System (NEW)
+- **Dynamic Combat Stances**: Attack patterns determine your stance during combat
+- **Flow Bar UI**: Visual indicator at bottom center showing stance progression
+  - 0-20%: Soul Stance (left side, blue)
+  - 40-60%: Balanced Stance (center, purple)
+  - 80-100%: Power Stance (right side, orange)
+- **Attack Pattern Mechanics**:
+  - Left attacks (LMB) move indicator left toward Soul Stance
+  - Right attacks (RMB) move indicator right toward Power Stance
+  - Alternating attacks (LMB/RMB) maintain center for Balanced Stance
+  - Consecutive same-side attacks move indicator faster
+- **Stance Benefits**:
+  - Soul Stance: Enhanced soul damage and abilities
+  - Power Stance: Enhanced physical damage and abilities
+  - Balanced Stance: Balanced benefits, requires alternating attack pattern
+- **Strategic Combat**: Players must manage their attack patterns to maintain desired stance
 
 ## Technical Features
 
@@ -129,7 +143,7 @@ TrinityFlow/
 │   ├── Characters/         # Character assets
 │   └── StarterContent/     # Basic assets
 ├── Config/                 # Project configuration
-└── Documentation/          # Game design documents
+└── Docs/                   # Core documentation
 ```
 
 ## Setup Instructions
@@ -145,7 +159,7 @@ TrinityFlow/
    - Open the generated `.sln` file
 
 3. **Configure Combat System**
-   - See [Combat System Setup](COMBAT_SYSTEM_SETUP.md) for complete setup guide
+   - See [Technical Architecture](TECHNICAL_ARCHITECTURE.md) for implementation details
    - Create weapon Blueprints and stats data assets
    - Configure Game Instance with weapon stats
    - Set up input actions and sockets
@@ -174,13 +188,35 @@ TrinityFlow/
 
 ## Documentation
 
-- [Game Design Document](GDD.md) - Complete game design specifications
-- [Combat System Setup](COMBAT_SYSTEM_SETUP.md) - Complete guide for setting up combat, weapons, and animations
-- [Shard System Setup](SHARD_SYSTEM_SETUP.md) - Guide for shard collection and altar activation system
-- [Implementation Plan](IMPLEMENTATION_PLAN.md) - Detailed technical roadmap
+- [Game Design Document](GAME_DESIGN_DOCUMENT.md) - Complete game design, mechanics, and systems
+- [Technical Architecture](TECHNICAL_ARCHITECTURE.md) - Code structure, components, and implementation
 - [Changelog](CHANGELOG.md) - Detailed update history
 
 ## Recent Updates
+
+### Stance Flow System & Combat Updates (2025-08-02)
+- **Dynamic Stance Flow System**:
+  - Combat-based stance changes through attack patterns
+  - Visual flow bar showing current position (0-100%)
+  - Left attacks (LMB) move toward Soul Stance
+  - Right attacks (RMB) move toward Power Stance
+  - Alternating patterns maintain Balanced Stance
+  - Consecutive attacks accelerate stance changes
+- **Enhanced Defense System**:
+  - Defense timing bars appear above attacking enemies
+  - Defensive abilities usable anytime (not just during timing windows)
+  - Perfect timing grants damage immunity
+  - Moderate timing reduces damage by 50%
+  - Failed timing or no timing = full damage
+- **Shard System Simplification**:
+  - Shards now only provide flat 3% damage bonuses
+  - No stance changes from shard activation
+  - Altar UI shows damage bonus percentages
+  - Clear separation between shards and stance mechanics
+- **Cinematic Camera Effects**:
+  - Attack shake effects (light/medium/heavy)
+  - Directional bump when taking damage
+  - Smooth Perlin noise-based camera movement
 
 ### Slate UI System Implementation (2025-08-01)
 - **Complete UI System Overhaul**: Migrated from Canvas to Slate framework

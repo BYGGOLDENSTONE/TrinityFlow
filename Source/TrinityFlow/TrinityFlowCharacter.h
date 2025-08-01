@@ -190,6 +190,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	class UShardComponent* ShardComponent;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	class UCameraShakeComponent* CameraShakeComponent;
+
 	/** Weapon Classes - Set these in Blueprint to spawn weapons */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapons")
 	TSubclassOf<class AOverrideKatana> LeftKatanaClass;

@@ -25,9 +25,15 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Stance")
     void SetStance(EStanceType NewStance);
 
-    // Shard Tracking (placeholder for now)
-    UFUNCTION(BlueprintCallable, Category = "Shards")
-    void UpdateStanceFromShards(int32 SoulShards, int32 PowerShards);
+    // Flow System
+    UFUNCTION(BlueprintCallable, Category = "Stance")
+    void OnAttackExecuted(bool bIsLeftAttack);
+    
+    UFUNCTION(BlueprintCallable, Category = "Stance")
+    float GetFlowPosition() const { return FlowPosition; }
+    
+    UFUNCTION(BlueprintCallable, Category = "Stance")
+    void ResetFlow();
 
     // Damage Modifiers
     UFUNCTION(BlueprintCallable, Category = "Stance")
@@ -41,7 +47,7 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stance")
     EStanceType CurrentStance;
 
-    // Placeholder for future implementation
+    // Stance bonuses
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stance", meta = (ClampMin = "0.0", ClampMax = "1.0"))
     float PowerStancePhysicalBonus = 0.15f;
 
@@ -50,7 +56,26 @@ protected:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stance", meta = (ClampMin = "0.0", ClampMax = "1.0"))
     float BalancedStanceBothBonus = 0.10f;
+    
+    // Flow system
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Flow")
+    float FlowPosition = 0.5f; // 0.0 = full soul, 1.0 = full power
+    
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Flow")
+    float FlowSpeed = 0.15f; // How much the indicator moves per attack
+    
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Flow")
+    float ConsecutiveAttackMultiplier = 1.5f; // Speed multiplier for consecutive same-side attacks
+    
+    // Attack tracking
+    TArray<bool> RecentAttacks; // Track last few attacks (true = left, false = right)
+    float TimeSinceLastAttack = 0.0f;
+    
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Flow")
+    float AttackResetTime = 2.0f; // Time before attack pattern resets
 
 private:
     void BroadcastStanceChange(EStanceType NewStance);
+    void UpdateStanceFromFlow();
+    bool IsAlternatingPattern() const;
 };

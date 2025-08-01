@@ -32,6 +32,17 @@ public:
     
     // Damage Numbers
     void AddDamageNumber(const FVector& WorldLocation, float Damage, bool bIsEcho, EDamageType DamageType);
+    
+    // Defense timing bar
+    void ShowDefenseTiming(float Duration, float PerfectStart, float PerfectEnd);
+    void HideDefenseTiming();
+    void ShowEnemyDefenseTiming(AEnemyBase* Enemy, float Duration, float PerfectStart, float PerfectEnd);
+    void HideEnemyDefenseTiming(AEnemyBase* Enemy);
+    
+    // Stance flow bar
+    void ShowStanceBar();
+    void HideStanceBar();
+    void UpdateStanceBar(float FlowPosition);
 
 private:
     void UpdateEnemyInfoPanels(const FGeometry& AllottedGeometry);
@@ -44,6 +55,8 @@ private:
     TSharedPtr<class SVerticalBox> PlayerStatsBox;
     TSharedPtr<class SOverlay> DamageNumberOverlay;
     TSharedPtr<class SOverlay> EnemyInfoOverlay;
+    TSharedPtr<class STrinityFlowDefenseTimingBar> DefenseTimingBar;
+    TSharedPtr<class STrinityFlowStanceBar> StanceBar;
     
     // Player stats text blocks
     TSharedPtr<class STextBlock> StanceText;

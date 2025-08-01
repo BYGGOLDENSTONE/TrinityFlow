@@ -14,6 +14,10 @@ public:
 
     void Construct(const FArguments& InArgs);
     void Update();
+    
+    // Timing bar control
+    void ShowTimingBar(float Duration, float PerfectStart, float PerfectEnd);
+    void HideTimingBar();
 
 private:
     AEnemyBase* TargetEnemy = nullptr;
@@ -21,4 +25,5 @@ private:
     TSharedPtr<class STextBlock> NameText;
     TSharedPtr<class SProgressBar> HealthBar;
     TSharedPtr<class STextBlock> StatsText;
+    TSharedPtr<class STrinityFlowDefenseTimingBar> TimingBar;
 };

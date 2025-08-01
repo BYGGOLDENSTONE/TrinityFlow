@@ -11,9 +11,11 @@
 #include "Kismet/GameplayStatics.h"
 #include "Engine/World.h"
 #include "Core/StateComponent.h"
+#include "Core/StanceComponent.h"
 #include "Core/HealthComponent.h"
 #include "Enemy/EnemyBase.h"
 #include "World/ShardAltar.h"
+#include "TrinityFlowCharacter.h"
 
 void UTrinityFlowUIManager::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -249,6 +251,21 @@ void UTrinityFlowUIManager::UpdateCombatState(bool bInCombat)
     {
         HUDWidget->UpdateCombatState(bInCombat);
     }
+    
+    // Reset stance flow when leaving combat
+    if (!bInCombat)
+    {
+        if (APawn* PlayerPawn = UGameplayStatics::GetPlayerPawn(GetWorld(), 0))
+        {
+            if (ATrinityFlowCharacter* PlayerChar = Cast<ATrinityFlowCharacter>(PlayerPawn))
+            {
+                if (UStanceComponent* StanceComp = PlayerChar->FindComponentByClass<UStanceComponent>())
+                {
+                    StanceComp->ResetFlow();
+                }
+            }
+        }
+    }
 }
 
 void UTrinityFlowUIManager::RegisterEnemy(AEnemyBase* Enemy)
@@ -337,4 +354,51 @@ void UTrinityFlowUIManager::AddFloatingText(const FVector& WorldLocation, const 
     // For now, we'll just add this as a damage number with 0 damage
     // In the future, we can create a dedicated floating text widget
     AddDamageNumber(WorldLocation, 0.0f, false, EDamageType::Physical);
+}
+
+void UTrinityFlowUIManager::ShowDefenseTiming(AActor* Attacker, float Duration, float PerfectStart, float PerfectEnd)
+{
+    if (HUDWidget.IsValid() && Attacker)
+    {
+        if (AEnemyBase* Enemy = Cast<AEnemyBase>(Attacker))
+        {
+            HUDWidget->ShowEnemyDefenseTiming(Enemy, Duration, PerfectStart, PerfectEnd);
+        }
+    }
+}
+
+void UTrinityFlowUIManager::HideDefenseTiming()
+{
+    // Hide timing for all enemies
+    if (HUDWidget.IsValid())
+    {
+        for (AEnemyBase* Enemy : RegisteredEnemies)
+        {
+            HUDWidget->HideEnemyDefenseTiming(Enemy);
+        }
+    }
+}
+
+void UTrinityFlowUIManager::ShowStanceBar()
+{
+    if (HUDWidget.IsValid())
+    {
+        HUDWidget->ShowStanceBar();
+    }
+}
+
+void UTrinityFlowUIManager::HideStanceBar()
+{
+    if (HUDWidget.IsValid())
+    {
+        HUDWidget->HideStanceBar();
+    }
+}
+
+void UTrinityFlowUIManager::UpdateStanceBar(float FlowPosition)
+{
+    if (HUDWidget.IsValid())
+    {
+        HUDWidget->UpdateStanceBar(FlowPosition);
+    }
 }

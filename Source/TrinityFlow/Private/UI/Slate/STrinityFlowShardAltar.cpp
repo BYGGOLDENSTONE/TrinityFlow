@@ -208,16 +208,16 @@ void STrinityFlowShardAltar::Construct(const FArguments& InArgs)
                         ]
                     ]
                     
-                    // Stance preview
+                    // Damage bonus preview
                     + SVerticalBox::Slot()
                     .AutoHeight()
                     .HAlign(HAlign_Center)
                     .Padding(0, 30, 0, 0)
                     [
                         SAssignNew(StancePreviewText, STextBlock)
-                        .Text(LOCTEXT("ResultingStance", "Resulting Stance: Balanced"))
+                        .Text(LOCTEXT("DamageBonus", "Damage Bonus: +0%"))
                         .Font(FSlateFontInfo(FPaths::EngineContentDir() / TEXT("Slate/Fonts/Roboto-Bold.ttf"), 24))
-                        .ColorAndOpacity(FSlateColor(FLinearColor(0.8f, 0.2f, 1.0f)))
+                        .ColorAndOpacity(FSlateColor(FLinearColor(0.8f, 0.8f, 0.2f)))
                         .ShadowOffset(FVector2D(1, 1))
                         .ShadowColorAndOpacity(FLinearColor::Black)
                     ]
@@ -498,12 +498,36 @@ void STrinityFlowShardAltar::UpdateStancePreview()
         return;
     }
     
-    EStanceType ResultingStance = CalculateResultingStance();
-    FText StanceName = GetStanceName(ResultingStance);
-    FLinearColor StanceColor = GetStanceColor(ResultingStance);
+    // Calculate total damage bonus from selected shards
+    float SoulDamageBonus = SoulAmount * 3.0f;
+    float PowerDamageBonus = PowerAmount * 3.0f;
     
-    StancePreviewText->SetText(FText::Format(LOCTEXT("ResultingStanceFormat", "Resulting Stance: {0}"), StanceName));
-    StancePreviewText->SetColorAndOpacity(FSlateColor(StanceColor));
+    if (SoulAmount > 0 && PowerAmount > 0)
+    {
+        StancePreviewText->SetText(FText::Format(
+            LOCTEXT("DamageBonusFormat", "Soul: +{0}%  Physical: +{1}%"), 
+            FText::AsNumber((int32)SoulDamageBonus),
+            FText::AsNumber((int32)PowerDamageBonus)
+        ));
+    }
+    else if (SoulAmount > 0)
+    {
+        StancePreviewText->SetText(FText::Format(
+            LOCTEXT("SoulBonusFormat", "Soul Damage: +{0}%"), 
+            FText::AsNumber((int32)SoulDamageBonus)
+        ));
+    }
+    else if (PowerAmount > 0)
+    {
+        StancePreviewText->SetText(FText::Format(
+            LOCTEXT("PowerBonusFormat", "Physical Damage: +{0}%"), 
+            FText::AsNumber((int32)PowerDamageBonus)
+        ));
+    }
+    else
+    {
+        StancePreviewText->SetText(LOCTEXT("NoBonusFormat", "No Damage Bonus"));
+    }
 }
 
 void STrinityFlowShardAltar::StartActivation()

@@ -98,6 +98,23 @@ public:
     UFUNCTION(BlueprintCallable, Category = "UI")
     void AddFloatingText(const FVector& WorldLocation, const FString& Text, const FLinearColor& Color);
     
+    // Defense Timing
+    UFUNCTION(BlueprintCallable, Category = "UI")
+    void ShowDefenseTiming(AActor* Attacker, float Duration, float PerfectStart, float PerfectEnd);
+    
+    UFUNCTION(BlueprintCallable, Category = "UI")
+    void HideDefenseTiming();
+    
+    // Stance Flow Bar
+    UFUNCTION(BlueprintCallable, Category = "UI")
+    void ShowStanceBar();
+    
+    UFUNCTION(BlueprintCallable, Category = "UI")
+    void HideStanceBar();
+    
+    UFUNCTION(BlueprintCallable, Category = "UI")
+    void UpdateStanceBar(float FlowPosition);
+    
     // Getters
 
     // Events

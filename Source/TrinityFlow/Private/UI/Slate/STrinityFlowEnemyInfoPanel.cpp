@@ -2,10 +2,12 @@
 #include "Enemy/EnemyBase.h"
 #include "Core/HealthComponent.h"
 #include "UI/TrinityFlowStyle.h"
+#include "UI/Slate/STrinityFlowDefenseTimingBar.h"
 #include "Widgets/SBoxPanel.h"
 #include "Widgets/Layout/SBox.h"
 #include "Widgets/Text/STextBlock.h"
 #include "Widgets/Notifications/SProgressBar.h"
+#include "Widgets/SOverlay.h"
 
 void STrinityFlowEnemyInfoPanel::Construct(const FArguments& InArgs)
 {
@@ -54,6 +56,15 @@ void STrinityFlowEnemyInfoPanel::Construct(const FArguments& InArgs)
                 .TextStyle(&Style->GetWidgetStyle<FTextBlockStyle>("TrinityFlow.Font.Regular"))
                 .ColorAndOpacity(Style->GetColor("TrinityFlow.Color.Neutral"))
             ]
+
+            // Timing Bar (shown above health bar when active)
+            + SVerticalBox::Slot()
+            .AutoHeight()
+            .Padding(0, 5)
+            [
+                SAssignNew(TimingBar, STrinityFlowDefenseTimingBar)
+                .Visibility(EVisibility::Collapsed)
+            ]
         ]
     ];
 
@@ -86,5 +97,23 @@ void STrinityFlowEnemyInfoPanel::Update()
         
         const FCharacterResources& Resources = HealthComp->GetResources();
         StatsText->SetText(FText::Format(FText::FromString("ATK: {0} | DEF: {1}"), FText::AsNumber(Resources.AttackPoint), FText::AsNumber(Resources.DefencePoint)));
+    }
+}
+
+void STrinityFlowEnemyInfoPanel::ShowTimingBar(float Duration, float PerfectStart, float PerfectEnd)
+{
+    if (TimingBar.IsValid())
+    {
+        TimingBar->SetVisibility(EVisibility::Visible);
+        TimingBar->StartTiming(Duration, PerfectStart, PerfectEnd);
+    }
+}
+
+void STrinityFlowEnemyInfoPanel::HideTimingBar()
+{
+    if (TimingBar.IsValid())
+    {
+        TimingBar->StopTiming();
+        TimingBar->SetVisibility(EVisibility::Collapsed);
     }
 }

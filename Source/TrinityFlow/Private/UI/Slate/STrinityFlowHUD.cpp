@@ -5,6 +5,8 @@
 #include "UI/Slate/STrinityFlowWeaponPanel.h"
 #include "UI/Slate/STrinityFlowDamageNumber.h"
 #include "UI/Slate/STrinityFlowEnemyInfoPanel.h"
+#include "UI/Slate/STrinityFlowDefenseTimingBar.h"
+#include "UI/Slate/STrinityFlowStanceBar.h"
 #include "Widgets/SBoxPanel.h"
 #include "Widgets/SOverlay.h"
 #include "Widgets/Layout/SBox.h"
@@ -15,6 +17,7 @@
 #include "Engine/World.h"
 #include "GameFramework/PlayerController.h"
 #include "Enemy/EnemyBase.h"
+#include "Core/StanceComponent.h"
 
 #define LOCTEXT_NAMESPACE "TrinityFlowHUD"
 
@@ -102,6 +105,15 @@ void STrinityFlowHUD::Construct(const FArguments& InArgs)
             ]
         ]
         
+        // Stance Flow Bar (Bottom Center, above weapon panels)
+        + SOverlay::Slot()
+        .HAlign(HAlign_Center)
+        .VAlign(VAlign_Bottom)
+        .Padding(0, 0, 0, 180)
+        [
+            SAssignNew(StanceBar, STrinityFlowStanceBar)
+        ]
+        
         // Combat State (Top Center)
         + SOverlay::Slot()
         .HAlign(HAlign_Center)
@@ -177,6 +189,14 @@ void STrinityFlowHUD::Construct(const FArguments& InArgs)
             ]
         ]
         
+        // Defense Timing Bar (Center)
+        + SOverlay::Slot()
+        .HAlign(HAlign_Center)
+        .VAlign(VAlign_Center)
+        [
+            SAssignNew(DefenseTimingBar, STrinityFlowDefenseTimingBar)
+        ]
+        
         // Crosshair (Center)
         + SOverlay::Slot()
         .HAlign(HAlign_Center)
@@ -236,24 +256,36 @@ void STrinityFlowHUD::UpdateWeaponCooldowns(float QCooldown, float TabCooldown, 
 
 void STrinityFlowHUD::UpdatePlayerStats(int32 SoulActive, int32 PowerActive, int32 SoulInactive, int32 PowerInactive, float SoulBonus, float PhysicalBonus)
 {
-    // Update stance based on shard counts
-    FText StanceTextValue;
-    FLinearColor StanceColor;
+    // Get actual stance from player's StanceComponent
+    FText StanceTextValue = LOCTEXT("BalancedStance", "Stance: Balanced");
+    FLinearColor StanceColor = FLinearColor(0.8f, 0.2f, 1.0f);
     
-    if (SoulActive > PowerActive)
+    if (UIManager)
     {
-        StanceTextValue = LOCTEXT("SoulStance", "Stance: Soul");
-        StanceColor = FLinearColor(0.0f, 0.5f, 1.0f);
-    }
-    else if (PowerActive > SoulActive)
-    {
-        StanceTextValue = LOCTEXT("PowerStance", "Stance: Power");
-        StanceColor = FLinearColor(1.0f, 0.5f, 0.0f);
-    }
-    else
-    {
-        StanceTextValue = LOCTEXT("BalancedStance", "Stance: Balanced");
-        StanceColor = FLinearColor(0.8f, 0.2f, 1.0f);
+        if (APawn* PlayerPawn = UIManager->GetWorld()->GetFirstPlayerController()->GetPawn())
+        {
+            if (UStanceComponent* StanceComp = PlayerPawn->FindComponentByClass<UStanceComponent>())
+            {
+                EStanceType CurrentStance = StanceComp->GetCurrentStance();
+                
+                switch (CurrentStance)
+                {
+                    case EStanceType::Soul:
+                        StanceTextValue = LOCTEXT("SoulStance", "Stance: Soul");
+                        StanceColor = FLinearColor(0.0f, 0.5f, 1.0f);
+                        break;
+                    case EStanceType::Power:
+                        StanceTextValue = LOCTEXT("PowerStance", "Stance: Power");
+                        StanceColor = FLinearColor(1.0f, 0.5f, 0.0f);
+                        break;
+                    case EStanceType::Balanced:
+                    default:
+                        StanceTextValue = LOCTEXT("BalancedStance", "Stance: Balanced");
+                        StanceColor = FLinearColor(0.8f, 0.2f, 1.0f);
+                        break;
+                }
+            }
+        }
     }
     
     // Update stats display
@@ -375,6 +407,68 @@ void STrinityFlowHUD::UpdateEnemyInfoPanels(const FGeometry& AllottedGeometry)
                 Panel->SetVisibility(EVisibility::Hidden);
             }
         }
+    }
+}
+
+void STrinityFlowHUD::ShowDefenseTiming(float Duration, float PerfectStart, float PerfectEnd)
+{
+    // No longer used - timing bars are shown per enemy
+}
+
+void STrinityFlowHUD::HideDefenseTiming()
+{
+    // No longer used - timing bars are shown per enemy
+}
+
+void STrinityFlowHUD::ShowEnemyDefenseTiming(AEnemyBase* Enemy, float Duration, float PerfectStart, float PerfectEnd)
+{
+    if (!Enemy)
+    {
+        return;
+    }
+    
+    TSharedPtr<STrinityFlowEnemyInfoPanel> Panel = EnemyInfoPanels.FindRef(Enemy);
+    if (Panel.IsValid())
+    {
+        Panel->ShowTimingBar(Duration, PerfectStart, PerfectEnd);
+    }
+}
+
+void STrinityFlowHUD::HideEnemyDefenseTiming(AEnemyBase* Enemy)
+{
+    if (!Enemy)
+    {
+        return;
+    }
+    
+    TSharedPtr<STrinityFlowEnemyInfoPanel> Panel = EnemyInfoPanels.FindRef(Enemy);
+    if (Panel.IsValid())
+    {
+        Panel->HideTimingBar();
+    }
+}
+
+void STrinityFlowHUD::ShowStanceBar()
+{
+    if (StanceBar.IsValid())
+    {
+        StanceBar->Show();
+    }
+}
+
+void STrinityFlowHUD::HideStanceBar()
+{
+    if (StanceBar.IsValid())
+    {
+        StanceBar->Hide();
+    }
+}
+
+void STrinityFlowHUD::UpdateStanceBar(float FlowPosition)
+{
+    if (StanceBar.IsValid())
+    {
+        StanceBar->SetIndicatorPosition(FlowPosition);
     }
 }
 

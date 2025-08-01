@@ -88,5 +88,4 @@ protected:
 
 private:
     void InitializeShardData();
-    void NotifyStanceComponent();
 };
