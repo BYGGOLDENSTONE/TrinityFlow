@@ -9,5 +9,7 @@ public class TrinityFlow : ModuleRules
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", "UMG", "Slate", "SlateCore", "AIModule", "NavigationSystem" });
+		
+		PublicIncludePaths.AddRange(new string[] { "TrinityFlow" });
 	}
 }

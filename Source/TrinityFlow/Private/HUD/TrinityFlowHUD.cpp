@@ -12,6 +12,7 @@
 #include "World/ShardAltar.h"
 #include "Core/ShardComponent.h"
 #include "Core/StanceComponent.h"
+#include "UI/TrinityFlowUIManager.h"
 
 ATrinityFlowHUD::ATrinityFlowHUD()
 {
@@ -23,6 +24,12 @@ void ATrinityFlowHUD::BeginPlay()
     Super::BeginPlay();
 
     PlayerCharacter = Cast<ATrinityFlowCharacter>(UGameplayStatics::GetPlayerPawn(GetWorld(), 0));
+    
+    // Setup Slate UI if enabled
+    if (bUseSlateUI)
+    {
+        SetupSlateUI();
+    }
     
     // Subscribe to damage events from all actors
     TArray<AActor*> AllActors;
@@ -61,38 +68,38 @@ void ATrinityFlowHUD::Tick(float DeltaTime)
     {
         if (APlayerController* PC = GetOwningPlayerController())
         {
-            // Check for Q key to close
-            if (PC->WasInputKeyJustPressed(EKeys::Q))
+            // Check for Q key or Circle button to close
+            if (PC->WasInputKeyJustPressed(EKeys::Q) || PC->WasInputKeyJustPressed(EKeys::Gamepad_FaceButton_Right))
             {
                 CloseShardActivationUI();
                 return;
             }
             
-            // Check for A/D to switch shard types
-            if (PC->WasInputKeyJustPressed(EKeys::A))
+            // Check for A/D or D-Pad Left/Right to switch shard types
+            if (PC->WasInputKeyJustPressed(EKeys::A) || PC->WasInputKeyJustPressed(EKeys::Gamepad_DPad_Left))
             {
                 bSelectingSoulShards = true;
                 CurrentInputString = &SoulShardInput;
             }
-            else if (PC->WasInputKeyJustPressed(EKeys::D))
+            else if (PC->WasInputKeyJustPressed(EKeys::D) || PC->WasInputKeyJustPressed(EKeys::Gamepad_DPad_Right))
             {
                 bSelectingSoulShards = false;
                 CurrentInputString = &PowerShardInput;
             }
             
-            // Check for W/S to increment/decrement shard amount
+            // Check for W/S or D-Pad Up/Down to increment/decrement shard amount
             if (CurrentInputString)
             {
                 int32 CurrentValue = FCString::Atoi(**CurrentInputString);
                 int32 MaxValue = bSelectingSoulShards ? CachedSoulInactive : CachedPowerInactive;
                 
-                if (PC->WasInputKeyJustPressed(EKeys::W))
+                if (PC->WasInputKeyJustPressed(EKeys::W) || PC->WasInputKeyJustPressed(EKeys::Gamepad_DPad_Up))
                 {
                     // Increment
                     CurrentValue = FMath::Clamp(CurrentValue + 1, 0, MaxValue);
                     *CurrentInputString = FString::FromInt(CurrentValue);
                 }
-                else if (PC->WasInputKeyJustPressed(EKeys::S))
+                else if (PC->WasInputKeyJustPressed(EKeys::S) || PC->WasInputKeyJustPressed(EKeys::Gamepad_DPad_Down))
                 {
                     // Decrement
                     CurrentValue = FMath::Clamp(CurrentValue - 1, 0, MaxValue);
@@ -109,6 +116,12 @@ void ATrinityFlowHUD::Tick(float DeltaTime)
 void ATrinityFlowHUD::DrawHUD()
 {
     Super::DrawHUD();
+
+    // Skip Canvas drawing if using Slate UI
+    if (bUseSlateUI)
+    {
+        return;
+    }
 
     if (!Canvas || !PlayerCharacter)
     {
@@ -573,7 +586,15 @@ void ATrinityFlowHUD::OnDamageDealt(AActor* DamagedActor, float ActualDamage, AA
             bIsEcho = StateComp->IsMarked() && DamageType == EDamageType::Soul;
         }
         
-        AddFloatingDamageNumber(DamagedActor->GetActorLocation(), ActualDamage, bIsEcho, DamageType);
+        // Forward to Slate UI if enabled
+        if (bUseSlateUI && UIManager)
+        {
+            UIManager->AddDamageNumber(DamagedActor->GetActorLocation(), ActualDamage, bIsEcho, DamageType);
+        }
+        else
+        {
+            AddFloatingDamageNumber(DamagedActor->GetActorLocation(), ActualDamage, bIsEcho, DamageType);
+        }
     }
 }
 
@@ -736,7 +757,14 @@ void ATrinityFlowHUD::DrawAltarInteractionUI()
     if (bCanActivate)
     {
         // Instruction
-        FString Instruction = TEXT("Press E to activate altar");
+        bool bUsingController = false;
+        if (APlayerController* PC = GetOwningPlayerController())
+        {
+            bUsingController = PC->IsInputKeyDown(EKeys::Gamepad_LeftThumbstick) || 
+                               PC->IsInputKeyDown(EKeys::Gamepad_RightThumbstick);
+        }
+        
+        FString Instruction = bUsingController ? TEXT("Press Triangle to activate altar") : TEXT("Press E to activate altar");
         DrawText(Instruction, FLinearColor::White, BaseX, BaseY);
         BaseY += 25;
         
@@ -827,6 +855,13 @@ void ATrinityFlowHUD::OpenShardActivationUI(AShardAltar* Altar)
         return;
     }
     
+    // Use Slate UI if enabled
+    if (bUseSlateUI && UIManager)
+    {
+        UIManager->ShowShardAltarUI(Altar);
+        return;
+    }
+    
     ActiveAltar = Altar;
     ShardActivationUIState = EShardActivationUIState::SelectingShardType;
     bSelectingSoulShards = true;
@@ -893,7 +928,16 @@ void ATrinityFlowHUD::DrawShardActivationPanel()
     
     // Draw instructions
     float InstructY = TitleY + 50.0f;
-    FString Instructions = TEXT("A/D: Select Shard Type | W/S: Increase/Decrease Amount | E: Activate | Q: Cancel");
+    bool bUsingController = false;
+    if (APlayerController* PC = GetOwningPlayerController())
+    {
+        bUsingController = PC->IsInputKeyDown(EKeys::Gamepad_LeftThumbstick) || 
+                           PC->IsInputKeyDown(EKeys::Gamepad_RightThumbstick);
+    }
+    
+    FString Instructions = bUsingController ?
+        TEXT("D-Pad L/R: Select Type | D-Pad U/D: Adjust | Triangle: Activate | Circle: Cancel") :
+        TEXT("A/D: Select Shard Type | W/S: Increase/Decrease Amount | E: Activate | Q: Cancel");
     DrawText(Instructions, FLinearColor::White, PanelX + 50.0f, InstructY);
     
     // Draw shard sections
@@ -997,7 +1041,7 @@ void ATrinityFlowHUD::DrawShardActivationPanel()
     // Draw activation button prompt
     if (SoulToActivate > 0 || PowerToActivate > 0)
     {
-        FString ActivatePrompt = TEXT("Press E to Activate Shards");
+        FString ActivatePrompt = bUsingController ? TEXT("Press Triangle to Activate Shards") : TEXT("Press E to Activate Shards");
         DrawText(ActivatePrompt, FLinearColor::Green, PanelX + PanelWidth * 0.5f - 100.0f, PreviewY + 40.0f, nullptr, 1.1f);
     }
 }
@@ -1044,5 +1088,25 @@ EStanceType ATrinityFlowHUD::CalculateStanceFromShards(int32 SoulActive, int32 P
     else
     {
         return EStanceType::Balanced;
+    }
+}
+
+void ATrinityFlowHUD::SetupSlateUI()
+{
+    // Get UI Manager
+    if (UGameInstance* GameInstance = GetGameInstance())
+    {
+        UIManager = GameInstance->GetSubsystem<UTrinityFlowUIManager>();
+        if (!UIManager)
+        {
+            UE_LOG(LogTemp, Warning, TEXT("Failed to get UIManager subsystem"));
+            return;
+        }
+        
+        // The UI Manager already shows the HUD in game mode initialization
+        // We just need to subscribe to updates
+        
+        // Subscribe to damage events to forward to Slate UI
+        // The damage events are already being captured in BeginPlay
     }
 }

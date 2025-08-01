@@ -21,6 +21,10 @@
 		{
 			"Name": "meshy",
 			"Enabled": false
+		},
+		{
+			"Name": "RawInput",
+			"Enabled": true
 		}
 	]
 }

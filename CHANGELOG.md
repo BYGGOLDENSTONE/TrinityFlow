@@ -5,6 +5,92 @@ All notable changes to TrinityFlow are documented in this file.
 ## [Latest] - 2025-08-01
 
 ### Added
+- **Complete Slate UI System**
+  - Modern UI framework replacing Canvas-based rendering
+  - Animated main menu with fade-in effects
+  - Pause menu with proper input mode handling
+  - Redesigned HUD with health bar, weapon panels, and stats display
+  - Slate-based floating damage numbers with size scaling
+  - Fully animated shard altar interface
+  - Centralized UI Manager subsystem
+  - Support for both Slate and Canvas rendering modes
+  
+- **UI Manager Architecture**
+  - `UTrinityFlowUIManager` game instance subsystem
+  - Centralized state management for all UI
+  - Event-driven updates for better performance
+  - Proper widget lifecycle management
+
+- **Menu Navigation Features**
+  - Full keyboard navigation (W/S keys or arrow keys)
+  - E key or Enter for button activation
+  - Mouse support with proper cursor management
+  - Visual selection highlighting
+  - Escape key support in pause menu
+
+- **Game Flow Improvements**
+  - Main menu appears on game start
+  - Pause game functionality via Escape key
+  - Full game restart when returning to main menu from pause
+  - Proper input mode switching between UI and gameplay
+
+### Changed
+- **HUD System Enhancement**
+  - Added `bUseSlateUI` flag to toggle between Canvas and Slate
+  - HUD now forwards damage events to UI Manager when using Slate
+  - Shard altar UI redirects to Slate implementation when enabled
+
+- **Input System Updates**
+  - Added PauseGameAction to character input mapping
+  - Character now handles pause input directly
+  - Input mode management moved to UI Manager
+
+### Fixed
+- **UI Cursor Issues**
+  - Fixed mouse cursor not appearing in menus
+  - Removed conflicting input mode settings in GameMode
+  - Proper input mode transitions between states
+
+- **Menu Transition Problems**
+  - Fixed main menu not showing at game start
+  - Fixed game restart functionality
+  - Resolved level loading issues with single-level setup
+
+## [Previous] - 2025-08-01
+
+### Added
+- **Full Controller Support**
+  - Controller mappings can be added to existing Input Actions
+  - Recommended mapping: L1/L2/Square for left katana, R1/R2/Circle for right katana
+  - X button can trigger global defensive ability through RightDefensive action
+  - Triangle can be added to E ability for interaction
+  - D-Pad navigation for shard activation UI (hardcoded)
+  
+- **Global Defensive Ability System**
+  - X button triggers stance-appropriate defense
+  - Soul Stance: Activates Scripted Dodge
+  - Power Stance: Activates Order
+  - Balanced Stance: Activates Flow Guard (new ability)
+  
+- **Flow Guard Defensive Ability**
+  - Exclusive to Balanced Stance
+  - 60% damage reduction for 1.5 seconds
+  - Combines benefits of dodge and armor mechanics
+  
+- **Dynamic UI Prompts**
+  - Automatically detects controller usage
+  - Updates all prompts to show appropriate buttons
+  - Seamless switching between keyboard and controller
+
+### Changed
+- **Input System Enhancement**
+  - Extended character input to support both keyboard and controller
+  - Added input filtering for UI interactions
+  - Improved input priority handling
+
+## [Previous] - 2025-08-01 (Earlier)
+
+### Added
 - **Enemy Animation System**
   - Created `EnemyAnimationComponent` for managing all enemy combat animations
   - Separate hit response animations for left and right weapon attacks

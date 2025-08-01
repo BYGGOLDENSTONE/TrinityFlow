@@ -168,6 +168,9 @@ TrinityFlow/
   - Soul Stance: Soul-themed defense
   - Power Stance: Physical-themed defense
   - Balanced Stance: Power stance animations (temporary)
+- **Pause Menu**: Escape key
+- **Menu Navigation**: W/S keys or Up/Down arrows
+- **Menu Select**: E key or Enter
 
 ## Documentation
 
@@ -178,6 +181,28 @@ TrinityFlow/
 - [Changelog](CHANGELOG.md) - Detailed update history
 
 ## Recent Updates
+
+### Slate UI System Implementation (2025-08-01)
+- **Complete UI System Overhaul**: Migrated from Canvas to Slate framework
+  - Created centralized UI Manager subsystem for state management
+  - Implemented main menu with fade-in animations
+  - Added pause menu with resume/settings/quit options
+  - Created in-game HUD with health bar, weapon panels, and player stats
+  - Built animated shard altar interaction UI
+  - Added floating damage numbers using Slate
+- **Menu Navigation System**:
+  - Full keyboard support (W/S for navigation, E for activation)
+  - Mouse support with proper input mode switching
+  - Smooth transitions between UI states
+- **Game Flow Improvements**:
+  - Main menu appears on game start
+  - Pause menu accessible via Escape key
+  - Full game restart when returning to main menu
+  - Proper input mode management (UI vs Game)
+- **Visual Enhancements**:
+  - Consistent styling across all UI elements
+  - Keyboard selection highlighting
+  - Animation support throughout
 
 ### Defensive System & UI Overhaul (2025-07-31)
 - **Unified Defensive System**: All defensive abilities now use Space key

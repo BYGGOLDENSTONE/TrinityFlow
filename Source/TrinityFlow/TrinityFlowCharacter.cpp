@@ -28,6 +28,7 @@
 #include "Engine/World.h"
 #include "Kismet/GameplayStatics.h"
 #include "World/ShardAltar.h"
+#include "TrinityFlowGameMode.h"
 #include "HUD/TrinityFlowHUD.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
@@ -135,10 +136,98 @@ void ATrinityFlowCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInp
 		EnhancedInputComponent->BindAction(LeftDefensiveAction, ETriggerEvent::Started, this, &ATrinityFlowCharacter::LeftDefensiveAbility);   // Shift - Scripted Dodge
 		EnhancedInputComponent->BindAction(RightDefensiveAction, ETriggerEvent::Started, this, &ATrinityFlowCharacter::RightDefensiveAbility); // Space - Order / Jump
 		EnhancedInputComponent->BindAction(RightDefensiveAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
+
+		// UI
+		EnhancedInputComponent->BindAction(PauseGameAction, ETriggerEvent::Started, this, &ATrinityFlowCharacter::PauseGame); // Escape - Pause menu
 	}
 	else
 	{
 		UE_LOG(LogTemplateCharacter, Error, TEXT("'%s' Failed to find an Enhanced Input component! This template is built to use the Enhanced Input system. If you intend to use the legacy system, then you will need to update this C++ file."), *GetNameSafe(this));
+	}
+}
+
+void ATrinityFlowCharacter::GlobalDefensiveAbility()
+{
+	// Check if UI is blocking input
+	if (IsUIBlockingInput())
+	{
+		return;
+	}
+	
+	// Check if animation is locked
+	if (AnimationComponent && !AnimationComponent->CanPlayNewAnimation())
+	{
+		UE_LOG(LogTemplateCharacter, Log, TEXT("Cannot use defensive ability: Animation is locked"));
+		return;
+	}
+	
+	// Only works in combat
+	if (!StateComponent || !StateComponent->HasState(ECharacterState::Combat))
+	{
+		UE_LOG(LogTemplateCharacter, Log, TEXT("Global defensive ability only works in combat"));
+		return;
+	}
+	
+	// Check if already active
+	if (bDefensiveAbilityActive)
+	{
+		UE_LOG(LogTemplateCharacter, Log, TEXT("Defensive ability already active"));
+		return;
+	}
+	
+	// Get current stance from StanceComponent
+	EStanceType CurrentStance = EStanceType::Balanced;
+	if (StanceComponent)
+	{
+		CurrentStance = StanceComponent->GetCurrentStance();
+	}
+	
+	// Determine which defensive ability to use based on stance
+	switch (CurrentStance)
+	{
+		case EStanceType::Soul:
+			// Soul Stance - Use Scripted Dodge (left defensive)
+			UE_LOG(LogTemplateCharacter, Log, TEXT("Global Defense: Using Scripted Dodge (Soul Stance)"));
+			if (LeftKatana)
+			{
+				LeftKatana->DefensiveAbility();
+			}
+			break;
+			
+		case EStanceType::Power:
+			// Power Stance - Use Order (right defensive)
+			UE_LOG(LogTemplateCharacter, Log, TEXT("Global Defense: Using Order (Power Stance)"));
+			if (RightKatana)
+			{
+				RightKatana->DefensiveAbility();
+			}
+			break;
+			
+		case EStanceType::Balanced:
+			// Balanced Stance - Use Flow Guard (both weapons)
+			UE_LOG(LogTemplateCharacter, Log, TEXT("Global Defense: Using Flow Guard (Balanced Stance)"));
+			// Activate both defensive abilities for balanced effect
+			if (LeftKatana && RightKatana)
+			{
+				// Flow Guard provides combined benefits
+				bDefensiveAbilityActive = true;
+				DefensiveDamageMultiplier = 0.4f; // 60% damage reduction
+				DefensiveAbilityType = TEXT("Flow Guard");
+				DefensiveAbilityWindow = 1.5f; // 1.5 second window
+				
+				// Visual feedback for Flow Guard
+				UE_LOG(LogTemplateCharacter, Log, TEXT("Flow Guard activated! 60%% damage reduction for 1.5 seconds"));
+				
+				// Set timer to deactivate
+				GetWorldTimerManager().SetTimer(DefensiveAbilityTimer, [this]()
+				{
+					bDefensiveAbilityActive = false;
+					DefensiveDamageMultiplier = 1.0f;
+					DefensiveAbilityType = TEXT("");
+					UE_LOG(LogTemplateCharacter, Log, TEXT("Flow Guard deactivated"));
+				}, DefensiveAbilityWindow, false);
+			}
+			break;
 	}
 }
 
@@ -467,7 +556,7 @@ void ATrinityFlowCharacter::AbilityE()
 		return;
 	}
 	
-	// First check if shard activation UI is open
+	// First check if shard activation UI is open (handles both E and Triangle)
 	if (APlayerController* PC = Cast<APlayerController>(GetController()))
 	{
 		if (ATrinityFlowHUD* HUD = Cast<ATrinityFlowHUD>(PC->GetHUD()))
@@ -935,5 +1024,14 @@ void ATrinityFlowCharacter::SpawnWeapons()
 	else
 	{
 		UE_LOG(LogTemplateCharacter, Warning, TEXT("RightKatanaClass not set - weapon will not spawn. Set it in Blueprint!"));
+	}
+}
+
+void ATrinityFlowCharacter::PauseGame()
+{
+	// Get the game mode and request pause
+	if (ATrinityFlowGameMode* GameMode = Cast<ATrinityFlowGameMode>(UGameplayStatics::GetGameMode(this)))
+	{
+		GameMode->OnPauseRequested();
 	}
 }

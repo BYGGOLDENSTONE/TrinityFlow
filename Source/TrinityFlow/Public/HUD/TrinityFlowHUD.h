@@ -49,6 +49,9 @@ public:
     virtual void DrawHUD() override;
     virtual void BeginPlay() override;
     virtual void Tick(float DeltaTime) override;
+    
+    // Integration with new UI system
+    void SetupSlateUI();
 
     UFUNCTION()
     void OnDamageDealt(AActor* DamagedActor, float ActualDamage, AActor* DamageInstigator, EDamageType DamageType);
@@ -133,4 +136,10 @@ protected:
     int32 CachedSoulInactive = 0;
     int32 CachedPowerActive = 0;
     int32 CachedPowerInactive = 0;
+    
+    // Slate UI integration
+    UPROPERTY(EditDefaultsOnly, Category = "UI")
+    bool bUseSlateUI = true;
+    
+    class UTrinityFlowUIManager* UIManager = nullptr;
 };

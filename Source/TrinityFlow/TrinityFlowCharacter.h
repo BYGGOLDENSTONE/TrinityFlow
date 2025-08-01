@@ -77,6 +77,11 @@ class ATrinityFlowCharacter : public ACharacter
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* RightDefensiveAction;
 
+	/** Pause Game Input Action (Escape) */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* PauseGameAction;
+
+
 public:
 	ATrinityFlowCharacter();
 
@@ -157,6 +162,8 @@ protected:
 	/** Called for defensive abilities */
 	void LeftDefensiveAbility();   // Shift - Scripted Dodge
 	void RightDefensiveAbility();  // Space - Order
+	void GlobalDefensiveAbility(); // X - Stance-based defensive
+	void PauseGame();  // Escape - Pause menu
 
 	/** Components */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
@@ -220,6 +227,9 @@ protected:
 	AActor* PendingAttacker = nullptr;
 	float PendingDamage = 0.0f;
 	EDamageType PendingDamageType = EDamageType::Physical;
+	FString DefensiveAbilityType = TEXT("");
+	float DefensiveAbilityWindow = 0.0f;
+	FTimerHandle DefensiveAbilityTimer;
 	
 	// Weapon attachment is handled in Blueprint
 	
