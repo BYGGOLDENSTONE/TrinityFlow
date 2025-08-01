@@ -104,15 +104,15 @@ FLinearColor STrinityFlowDamageNumber::GetDamageColor() const
 {
     if (bIsEcho)
     {
-        return FLinearColor(0.0f, 0.5f, 1.0f); // Blue for echo
+        return FLinearColor(0.0f, 0.8f, 1.0f); // Bright blue for echo
     }
     else if (DamageType == EDamageType::Soul)
     {
-        return FLinearColor(0.0f, 0.5f, 1.0f); // Blue for soul
+        return FLinearColor(0.0f, 0.6f, 1.0f); // Blue for soul damage
     }
     else
     {
-        return FLinearColor(1.0f, 0.5f, 0.0f); // Orange for physical
+        return FLinearColor(1.0f, 0.4f, 0.0f); // Orange for physical damage
     }
 }
 

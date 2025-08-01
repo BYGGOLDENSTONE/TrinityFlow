@@ -76,10 +76,27 @@ void STrinityFlowWeaponPanel::Construct(const FArguments& InArgs)
                     .VAlign(VAlign_Center)
                     .Padding(10, 5)
                     [
-                        SAssignNew(Ability1Text, STextBlock)
-                        .Text(FText::Format(LOCTEXT("AbilityReady", "{0}: Ready"), AbilityKey1))
-                        .Font(FSlateFontInfo(FPaths::EngineContentDir() / TEXT("Slate/Fonts/Roboto-Regular.ttf"), 14))
-                        .ColorAndOpacity(FSlateColor(FLinearColor::Green))
+                        SNew(SVerticalBox)
+                        + SVerticalBox::Slot()
+                        .AutoHeight()
+                        .HAlign(HAlign_Center)
+                        [
+                            SNew(STextBlock)
+                            .Text(AbilityKey1)
+                            .Font(FSlateFontInfo(FPaths::EngineContentDir() / TEXT("Slate/Fonts/Roboto-Bold.ttf"), 16))
+                            .ColorAndOpacity(FSlateColor(FLinearColor::White))
+                            .ShadowOffset(FVector2D(1, 1))
+                            .ShadowColorAndOpacity(FLinearColor::Black)
+                        ]
+                        + SVerticalBox::Slot()
+                        .AutoHeight()
+                        .HAlign(HAlign_Center)
+                        [
+                            SAssignNew(Ability1Text, STextBlock)
+                            .Text(LOCTEXT("Ready", "Ready"))
+                            .Font(FSlateFontInfo(FPaths::EngineContentDir() / TEXT("Slate/Fonts/Roboto-Regular.ttf"), 14))
+                            .ColorAndOpacity(FSlateColor(FLinearColor::Green))
+                        ]
                     ]
                 ]
                 
@@ -114,10 +131,27 @@ void STrinityFlowWeaponPanel::Construct(const FArguments& InArgs)
                     .VAlign(VAlign_Center)
                     .Padding(10, 5)
                     [
-                        SAssignNew(Ability2Text, STextBlock)
-                        .Text(FText::Format(LOCTEXT("AbilityReady", "{0}: Ready"), AbilityKey2))
-                        .Font(FSlateFontInfo(FPaths::EngineContentDir() / TEXT("Slate/Fonts/Roboto-Regular.ttf"), 14))
-                        .ColorAndOpacity(FSlateColor(FLinearColor::Green))
+                        SNew(SVerticalBox)
+                        + SVerticalBox::Slot()
+                        .AutoHeight()
+                        .HAlign(HAlign_Center)
+                        [
+                            SNew(STextBlock)
+                            .Text(AbilityKey2)
+                            .Font(FSlateFontInfo(FPaths::EngineContentDir() / TEXT("Slate/Fonts/Roboto-Bold.ttf"), 16))
+                            .ColorAndOpacity(FSlateColor(FLinearColor::White))
+                            .ShadowOffset(FVector2D(1, 1))
+                            .ShadowColorAndOpacity(FLinearColor::Black)
+                        ]
+                        + SVerticalBox::Slot()
+                        .AutoHeight()
+                        .HAlign(HAlign_Center)
+                        [
+                            SAssignNew(Ability2Text, STextBlock)
+                            .Text(LOCTEXT("Ready", "Ready"))
+                            .Font(FSlateFontInfo(FPaths::EngineContentDir() / TEXT("Slate/Fonts/Roboto-Regular.ttf"), 14))
+                            .ColorAndOpacity(FSlateColor(FLinearColor::Green))
+                        ]
                     ]
                 ]
             ]

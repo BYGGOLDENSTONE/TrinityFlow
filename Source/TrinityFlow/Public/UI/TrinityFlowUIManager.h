@@ -69,6 +69,12 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "UI")
     void UpdateWeaponCooldowns(float QCooldown, float TabCooldown, float ECooldown, float RCooldown);
+    
+    UFUNCTION(BlueprintCallable, Category = "UI")
+    void UpdatePlayerStats(int32 SoulActive, int32 PowerActive, int32 SoulInactive, int32 PowerInactive, float SoulBonus, float PhysicalBonus);
+    
+    UFUNCTION(BlueprintCallable, Category = "UI")
+    void UpdateCombatState(bool bInCombat);
 
     UFUNCTION()
     void OnDamageDealt(AActor* DamagedActor, float ActualDamage, AActor* DamageInstigator, EDamageType DamageType);
@@ -77,6 +83,22 @@ public:
     void RegisterEnemy(AEnemyBase* Enemy);
     void UnregisterEnemy(AEnemyBase* Enemy);
     const TArray<AEnemyBase*>& GetRegisteredEnemies() const;
+    
+    // Shard Altar
+    UFUNCTION(BlueprintCallable, Category = "UI")
+    void OpenShardActivationUI(class AShardAltar* Altar);
+    
+    UFUNCTION(BlueprintCallable, Category = "UI")
+    void CloseShardActivationUI();
+    
+    UFUNCTION(BlueprintCallable, Category = "UI")
+    bool IsShardActivationUIOpen() const { return ActiveAltar != nullptr; }
+    
+    // Floating Text
+    UFUNCTION(BlueprintCallable, Category = "UI")
+    void AddFloatingText(const FVector& WorldLocation, const FString& Text, const FLinearColor& Color);
+    
+    // Getters
 
     // Events
     UPROPERTY(BlueprintAssignable, Category = "UI")
@@ -100,6 +122,10 @@ protected:
 
     // Enemy Registry
     TArray<AEnemyBase*> RegisteredEnemies;
+    
+    // Active Altar
+    UPROPERTY()
+    class AShardAltar* ActiveAltar = nullptr;
 
     void CreateWidgets();
     void ShowWidget(TSharedPtr<SWidget> Widget);

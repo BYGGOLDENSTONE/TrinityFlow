@@ -34,10 +34,15 @@ void STrinityFlowEnemyInfoPanel::Construct(const FArguments& InArgs)
             .AutoHeight()
             .Padding(0, 5)
             [
-                SAssignNew(HealthBar, SProgressBar)
-                .Percent(1.0f)
-                .FillColorAndOpacity(Style->GetColor("TrinityFlow.Color.Negative"))
-                .BorderPadding(FVector2D(0, 0))
+                SNew(SBox)
+                .HeightOverride(8)
+                [
+                    SAssignNew(HealthBar, SProgressBar)
+                    .Percent(1.0f)
+                    .BarFillType(EProgressBarFillType::LeftToRight)
+                    .FillColorAndOpacity(FLinearColor(1.0f, 0.0f, 0.0f, 1.0f))
+                    .FillImage(FCoreStyle::Get().GetBrush("WhiteBrush"))
+                ]
             ]
 
             // Stats
@@ -66,7 +71,19 @@ void STrinityFlowEnemyInfoPanel::Update()
 
     if (UHealthComponent* HealthComp = TargetEnemy->FindComponentByClass<UHealthComponent>())
     {
-        HealthBar->SetPercent(HealthComp->GetHealthPercentage());
+        float HealthPercent = HealthComp->GetHealthPercentage();
+        HealthBar->SetPercent(HealthPercent);
+        
+        // Hide health bar if health is 0
+        if (HealthPercent <= 0.0f)
+        {
+            HealthBar->SetVisibility(EVisibility::Hidden);
+        }
+        else
+        {
+            HealthBar->SetVisibility(EVisibility::Visible);
+        }
+        
         const FCharacterResources& Resources = HealthComp->GetResources();
         StatsText->SetText(FText::Format(FText::FromString("ATK: {0} | DEF: {1}"), FText::AsNumber(Resources.AttackPoint), FText::AsNumber(Resources.DefencePoint)));
     }

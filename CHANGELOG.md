@@ -2,7 +2,28 @@
 
 All notable changes to TrinityFlow are documented in this file.
 
-## [Latest] - 2025-08-01
+## [Latest] - 2025-08-02
+
+### Changed
+- **UI Architecture Consolidation**
+  - Removed redundant `ATrinityFlowHUD` class
+  - Consolidated all UI functionality into `UTrinityFlowUIManager`
+  - Improved code maintainability and reduced complexity
+  - Fixed duplicate delegate subscription crashes
+  - Updated all UI references throughout the codebase
+
+### Fixed
+- Fixed altar interaction animation not playing before UI opens
+- Fixed altar menu input focus issues (direct keyboard interaction)
+- Fixed altar activation progress bar freezing
+- Fixed player UI ability section display bugs
+- Fixed health bars rendering as black
+- Fixed combat state not updating properly
+- Fixed enemy health bar responsiveness
+- Fixed damage bonus calculations (3% per shard)
+- Fixed damage number colors (blue for soul, orange for physical)
+
+## [Previous] - 2025-08-01
 
 ### Added
 - **Complete Slate UI System**

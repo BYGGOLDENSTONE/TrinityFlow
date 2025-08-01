@@ -66,6 +66,7 @@ TSharedRef<FSlateStyleSet> FTrinityFlowStyle::Create()
     Style.Set("TrinityFlow.Brush.ToolPanel", new FSlateColorBrush(Style.GetColor("TrinityFlow.Color.Background")));
     Style.Set("TrinityFlow.Brush.White", new FSlateColorBrush(FLinearColor::White));
     Style.Set("TrinityFlow.Brush.Separator", new FSlateColorBrush(Style.GetColor("TrinityFlow.Color.Border")));
+    Style.Set("TrinityFlow.Brush.HealthBar", new FSlateColorBrush(FLinearColor(0.8f, 0.0f, 0.0f, 1.0f)));
 
     return StyleRef;
 }

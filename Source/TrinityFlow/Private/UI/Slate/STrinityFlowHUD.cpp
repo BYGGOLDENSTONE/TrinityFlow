@@ -142,15 +142,26 @@ void STrinityFlowHUD::Construct(const FArguments& InArgs)
                     .ColorAndOpacity(Style->GetColor("TrinityFlow.Color.Balanced"))
                 ]
                 
-                // Shards
+                // Active Shards
                 + SVerticalBox::Slot()
                 .AutoHeight()
                 .Padding(0, 5, 0, 0)
                 [
                     SAssignNew(ShardsText, STextBlock)
-                    .Text(LOCTEXT("Shards", "Shards: 0 Soul / 0 Power"))
+                    .Text(LOCTEXT("ActiveShards", "Active: 0 Soul / 0 Power"))
                     .TextStyle(&Style->GetWidgetStyle<FTextBlockStyle>("TrinityFlow.Font.Regular"))
                     .ColorAndOpacity(Style->GetColor("TrinityFlow.Color.Neutral"))
+                ]
+                
+                // Inactive Shards
+                + SVerticalBox::Slot()
+                .AutoHeight()
+                .Padding(0, 2, 0, 0)
+                [
+                    SAssignNew(InactiveShardsText, STextBlock)
+                    .Text(LOCTEXT("InactiveShards", "Inactive: 0 Soul / 0 Power"))
+                    .TextStyle(&Style->GetWidgetStyle<FTextBlockStyle>("TrinityFlow.Font.Regular"))
+                    .ColorAndOpacity(FSlateColor(FLinearColor(0.6f, 0.6f, 0.6f)))
                 ]
                 
                 // Damage Bonuses
@@ -223,7 +234,7 @@ void STrinityFlowHUD::UpdateWeaponCooldowns(float QCooldown, float TabCooldown, 
     }
 }
 
-void STrinityFlowHUD::UpdatePlayerStats(int32 SoulActive, int32 PowerActive, float SoulBonus, float PhysicalBonus)
+void STrinityFlowHUD::UpdatePlayerStats(int32 SoulActive, int32 PowerActive, int32 SoulInactive, int32 PowerInactive, float SoulBonus, float PhysicalBonus)
 {
     // Update stance based on shard counts
     FText StanceTextValue;
@@ -254,8 +265,14 @@ void STrinityFlowHUD::UpdatePlayerStats(int32 SoulActive, int32 PowerActive, flo
     
     if (ShardsText.IsValid())
     {
-        FText ShardsTextValue = FText::Format(LOCTEXT("ShardsFormat", "Shards: {0} Soul / {1} Power"), SoulActive, PowerActive);
+        FText ShardsTextValue = FText::Format(LOCTEXT("ActiveShardsFormat", "Active: {0} Soul / {1} Power"), SoulActive, PowerActive);
         ShardsText->SetText(ShardsTextValue);
+    }
+    
+    if (InactiveShardsText.IsValid())
+    {
+        FText InactiveShardsTextValue = FText::Format(LOCTEXT("InactiveShardsFormat", "Inactive: {0} Soul / {1} Power"), SoulInactive, PowerInactive);
+        InactiveShardsText->SetText(InactiveShardsTextValue);
     }
     
     if (DamageBonusText.IsValid())

@@ -27,7 +27,7 @@ public:
     // HUD Updates
     void UpdatePlayerHealth(float HealthPercentage);
     void UpdateWeaponCooldowns(float QCooldown, float TabCooldown, float ECooldown, float RCooldown);
-    void UpdatePlayerStats(int32 SoulActive, int32 PowerActive, float SoulBonus, float PhysicalBonus);
+    void UpdatePlayerStats(int32 SoulActive, int32 PowerActive, int32 SoulInactive, int32 PowerInactive, float SoulBonus, float PhysicalBonus);
     void UpdateCombatState(bool bInCombat);
     
     // Damage Numbers
@@ -48,6 +48,7 @@ private:
     // Player stats text blocks
     TSharedPtr<class STextBlock> StanceText;
     TSharedPtr<class STextBlock> ShardsText;
+    TSharedPtr<class STextBlock> InactiveShardsText;
     TSharedPtr<class STextBlock> DamageBonusText;
     
     // Damage Numbers

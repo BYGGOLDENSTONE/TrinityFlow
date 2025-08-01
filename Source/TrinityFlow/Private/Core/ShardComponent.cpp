@@ -129,17 +129,19 @@ void UShardComponent::NotifyStanceComponent()
 
 float UShardComponent::GetSoulDamageBonus() const
 {
+    // Soul shards provide soul damage bonus (3% per shard)
     int32 SoulShards = GetActiveShardCount(EShardType::Soul);
     float BaseBonus = SoulShards * DamageBonusPerShard;
     
-    // Check if we're in Soul stance for double bonus
+    // Add stance bonus if in Soul stance
     if (AActor* Owner = GetOwner())
     {
         if (UStanceComponent* StanceComp = Owner->FindComponentByClass<UStanceComponent>())
         {
             if (StanceComp->GetCurrentStance() == EStanceType::Soul)
             {
-                return BaseBonus * 2.0f; // Double bonus in matching stance
+                // Add the same bonus again (not double)
+                return BaseBonus + BaseBonus;
             }
         }
     }
@@ -149,17 +151,19 @@ float UShardComponent::GetSoulDamageBonus() const
 
 float UShardComponent::GetPhysicalDamageBonus() const
 {
+    // Power shards provide physical damage bonus (3% per shard)
     int32 PowerShards = GetActiveShardCount(EShardType::Power);
     float BaseBonus = PowerShards * DamageBonusPerShard;
     
-    // Check if we're in Power stance for double bonus
+    // Add stance bonus if in Power stance
     if (AActor* Owner = GetOwner())
     {
         if (UStanceComponent* StanceComp = Owner->FindComponentByClass<UStanceComponent>())
         {
             if (StanceComp->GetCurrentStance() == EStanceType::Power)
             {
-                return BaseBonus * 2.0f; // Double bonus in matching stance
+                // Add the same bonus again (not double)
+                return BaseBonus + BaseBonus;
             }
         }
     }
@@ -173,11 +177,11 @@ void UShardComponent::GetDamageBonuses(float& OutSoulBonus, float& OutPhysicalBo
     int32 SoulShards = GetActiveShardCount(EShardType::Soul);
     int32 PowerShards = GetActiveShardCount(EShardType::Power);
     
-    // Base bonuses from shards
+    // Base bonuses from shards (3% per shard)
     OutSoulBonus = SoulShards * DamageBonusPerShard;
     OutPhysicalBonus = PowerShards * DamageBonusPerShard;
     
-    // Stance bonuses (double the base bonus when in matching stance)
+    // Stance bonuses (add the same bonus again when in matching stance)
     OutSoulStanceBonus = 0.0f;
     OutPhysicalStanceBonus = 0.0f;
     
@@ -189,11 +193,11 @@ void UShardComponent::GetDamageBonuses(float& OutSoulBonus, float& OutPhysicalBo
             
             if (CurrentStance == EStanceType::Soul)
             {
-                OutSoulStanceBonus = OutSoulBonus; // Double the soul bonus
+                OutSoulStanceBonus = OutSoulBonus; // Add soul bonus again
             }
             else if (CurrentStance == EStanceType::Power)
             {
-                OutPhysicalStanceBonus = OutPhysicalBonus; // Double the physical bonus
+                OutPhysicalStanceBonus = OutPhysicalBonus; // Add physical bonus again
             }
         }
     }

@@ -1,7 +1,7 @@
 # Slate UI System Guide
 
 ## Overview
-TrinityFlow now features a modern Slate-based UI system that replaces the old Canvas-based HUD rendering. This system provides better performance, smoother animations, and a more professional appearance.
+TrinityFlow features a modern Slate-based UI system managed by a centralized UI Manager subsystem. This architecture provides better performance, smoother animations, and a more maintainable codebase compared to traditional HUD-based rendering.
 
 ## Features
 
@@ -31,39 +31,52 @@ TrinityFlow now features a modern Slate-based UI system that replaces the old Ca
 
 ## Setup Instructions
 
-### Enable Slate UI
+### UI System Setup
 
-1. **In Blueprint**:
-   - Open `BP_TrinityFlowHUD` (or create it from `ATrinityFlowHUD`)
-   - In Class Defaults, find the UI category
-   - Check "Use Slate UI" (enabled by default)
-
-2. **Game Mode Setup**:
+1. **Game Mode Setup**:
    - Create `BP_TrinityFlowGameMode` from `ATrinityFlowGameMode`
    - Set it as the default game mode in Project Settings
    - Or set it per-level in World Settings
+   - Note: No HUD class is needed - UI is managed by UIManager
 
-3. **Game Instance**:
+2. **Game Instance**:
    - Ensure `UTrinityFlowGameInstance` is set in Project Settings
    - This is required for the UI Manager subsystem
+
+3. **UI Manager**:
+   - Automatically initialized as a Game Instance Subsystem
+   - Handles all UI state transitions and updates
+   - No manual setup required
 
 ## Architecture
 
 ### UI Manager (`UTrinityFlowUIManager`)
-- Central subsystem that manages all UI states
-- Handles transitions between menus
+- Game Instance Subsystem that manages all UI
+- Singleton pattern - accessible from anywhere via Game Instance
+- Handles all UI state transitions
 - Provides unified API for UI updates
+- Manages enemy registry for health bars
+- Handles damage number display
 
 ### Widget Structure
 ```
-STrinityFlowMainMenu      - Main menu
-STrinityFlowPauseMenu     - Pause menu
-STrinityFlowHUD           - In-game HUD container
-  ├── STrinityFlowHealthBar    - Health display
-  ├── STrinityFlowWeaponPanel  - Weapon info (x2)
-  └── STrinityFlowDamageNumber - Floating damage
-STrinityFlowShardAltar    - Altar interaction UI
+UTrinityFlowUIManager (Game Instance Subsystem)
+  ├── STrinityFlowMainMenu       - Main menu
+  ├── STrinityFlowPauseMenu      - Pause menu
+  ├── STrinityFlowHUD            - In-game HUD container
+  │   ├── STrinityFlowHealthBar      - Player health
+  │   ├── STrinityFlowWeaponPanel    - Weapon info (x2)
+  │   ├── STrinityFlowPlayerInfo     - Stats & shards
+  │   ├── STrinityFlowEnemyInfoPanel - Enemy health bars
+  │   └── STrinityFlowDamageNumber   - Floating damage
+  └── STrinityFlowShardAltar     - Altar interaction UI
 ```
+
+### Key Differences from Traditional HUD
+- No `ATrinityFlowHUD` class needed
+- UI Manager persists across level changes
+- Centralized event handling
+- Better separation of concerns
 
 ## Adding Pause Functionality
 
@@ -110,17 +123,37 @@ To change: Update font paths in widget constructors
 - Shard altar scale-in: 0.5s quadratic ease-out
 - Damage numbers: 2s lifetime with upward float
 
-## Switching Between Canvas and Slate
+## API Usage Examples
 
-The HUD supports both rendering modes:
+### Updating UI from Character
+```cpp
+if (UGameInstance* GameInstance = GetGameInstance())
+{
+    if (UTrinityFlowUIManager* UIManager = GameInstance->GetSubsystem<UTrinityFlowUIManager>())
+    {
+        // Update health
+        UIManager->UpdatePlayerHealth(HealthPercentage);
+        
+        // Add damage number
+        UIManager->AddDamageNumber(Location, Damage, bIsEcho, DamageType);
+        
+        // Update combat state
+        UIManager->UpdateCombatState(bInCombat);
+    }
+}
+```
 
-1. **Use Slate** (default):
-   - Set `bUseSlateUI = true` in HUD
-   - Modern, animated UI
-
-2. **Use Canvas** (legacy):
-   - Set `bUseSlateUI = false` in HUD
-   - Original immediate-mode rendering
+### Registering Enemies
+```cpp
+// In enemy's BeginPlay
+if (UGameInstance* GameInstance = GetGameInstance())
+{
+    if (UTrinityFlowUIManager* UIManager = GameInstance->GetSubsystem<UTrinityFlowUIManager>())
+    {
+        UIManager->RegisterEnemy(this);
+    }
+}
+```
 
 ## Performance Considerations
 
@@ -132,9 +165,9 @@ The HUD supports both rendering modes:
 ## Troubleshooting
 
 ### UI Not Appearing
-1. Check that `bUseSlateUI` is enabled
-2. Verify Game Mode is set correctly
-3. Ensure Game Instance has UI Manager subsystem
+1. Verify Game Mode is set correctly
+2. Ensure Game Instance is UTrinityFlowGameInstance
+3. Check that UI Manager subsystem is initialized
 
 ### Input Issues
 1. Check input mode is set correctly

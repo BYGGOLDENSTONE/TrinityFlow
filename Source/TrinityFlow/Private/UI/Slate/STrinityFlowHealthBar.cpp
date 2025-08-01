@@ -28,8 +28,10 @@ void STrinityFlowHealthBar::Construct(const FArguments& InArgs)
         [
             SAssignNew(HealthProgressBar, SProgressBar)
             .Percent(1.0f)
-            .FillColorAndOpacity(FLinearColor(0.8f, 0.0f, 0.0f, 1.0f))
-            .BackgroundImage(FCoreStyle::Get().GetBrush("ProgressBar.Background"))
+            .FillColorAndOpacity(FLinearColor(0.8f, 0.2f, 0.2f, 1.0f))
+            .BackgroundImage(FCoreStyle::Get().GetBrush("WhiteBox"))
+            .BarFillType(EProgressBarFillType::LeftToRight)
+            .Style(&FCoreStyle::Get().GetWidgetStyle<FProgressBarStyle>("ProgressBar"))
         ]
         
         // Damage Flash

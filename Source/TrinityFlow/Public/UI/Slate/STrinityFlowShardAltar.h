@@ -25,6 +25,8 @@ public:
     void SetAltar(AShardAltar* InAltar);
     void PlayOpenAnimation();
     void PlayCloseAnimation();
+    
+    bool GetSelectedShardInfo(EShardType& OutType, int32& OutCount) const;
 
 private:
     // UI Manager reference

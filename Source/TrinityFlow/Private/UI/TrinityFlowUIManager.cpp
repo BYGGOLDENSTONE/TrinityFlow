@@ -11,6 +11,9 @@
 #include "Kismet/GameplayStatics.h"
 #include "Engine/World.h"
 #include "Core/StateComponent.h"
+#include "Core/HealthComponent.h"
+#include "Enemy/EnemyBase.h"
+#include "World/ShardAltar.h"
 
 void UTrinityFlowUIManager::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -85,7 +88,15 @@ void UTrinityFlowUIManager::SetUIState(EUIState NewState)
             
         case EUIState::ShardAltar:
             ShowWidget(ShardAltarWidget);
-            SetInputModeUI();
+            // Use GameAndUI mode for altar to allow keyboard input
+            if (APlayerController* PC = UGameplayStatics::GetPlayerController(GetWorld(), 0))
+            {
+                FInputModeGameAndUI InputMode;
+                InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+                InputMode.SetWidgetToFocus(ShardAltarWidget);
+                PC->SetInputMode(InputMode);
+                PC->bShowMouseCursor = true;
+            }
             break;
             
         case EUIState::None:
@@ -118,6 +129,13 @@ void UTrinityFlowUIManager::ShowShardAltarUI(AShardAltar* Altar)
         ShardAltarWidget->SetAltar(Altar);
     }
     SetUIState(EUIState::ShardAltar);
+    
+    // Set focus to the widget after state change
+    if (APlayerController* PC = UGameplayStatics::GetPlayerController(GetWorld(), 0))
+    {
+        // Give focus to the altar widget
+        FSlateApplication::Get().SetUserFocus(0, ShardAltarWidget);
+    }
 }
 
 void UTrinityFlowUIManager::HideAllUI()
@@ -217,11 +235,33 @@ void UTrinityFlowUIManager::UpdateWeaponCooldowns(float QCooldown, float TabCool
     }
 }
 
+void UTrinityFlowUIManager::UpdatePlayerStats(int32 SoulActive, int32 PowerActive, int32 SoulInactive, int32 PowerInactive, float SoulBonus, float PhysicalBonus)
+{
+    if (HUDWidget.IsValid())
+    {
+        HUDWidget->UpdatePlayerStats(SoulActive, PowerActive, SoulInactive, PowerInactive, SoulBonus, PhysicalBonus);
+    }
+}
+
+void UTrinityFlowUIManager::UpdateCombatState(bool bInCombat)
+{
+    if (HUDWidget.IsValid())
+    {
+        HUDWidget->UpdateCombatState(bInCombat);
+    }
+}
+
 void UTrinityFlowUIManager::RegisterEnemy(AEnemyBase* Enemy)
 {
     if (Enemy)
     {
         RegisteredEnemies.AddUnique(Enemy);
+        
+        // Subscribe to enemy's damage events
+        if (UHealthComponent* HealthComp = Enemy->FindComponentByClass<UHealthComponent>())
+        {
+            HealthComp->OnDamageDealt.AddDynamic(this, &UTrinityFlowUIManager::OnDamageDealt);
+        }
     }
 }
 
@@ -230,6 +270,12 @@ void UTrinityFlowUIManager::UnregisterEnemy(AEnemyBase* Enemy)
     if (Enemy)
     {
         RegisteredEnemies.Remove(Enemy);
+        
+        // Unsubscribe from enemy's damage events
+        if (UHealthComponent* HealthComp = Enemy->FindComponentByClass<UHealthComponent>())
+        {
+            HealthComp->OnDamageDealt.RemoveDynamic(this, &UTrinityFlowUIManager::OnDamageDealt);
+        }
     }
 }
 
@@ -250,7 +296,45 @@ void UTrinityFlowUIManager::OnDamageDealt(AActor* DamagedActor, float ActualDama
                 bIsEcho = StateComp->IsMarked() && DamageType == EDamageType::Soul;
             }
 
+            UE_LOG(LogTemp, Warning, TEXT("UIManager OnDamageDealt: Damage=%.1f, Type=%s, IsEcho=%s"), 
+                ActualDamage, 
+                DamageType == EDamageType::Soul ? TEXT("Soul") : TEXT("Physical"),
+                bIsEcho ? TEXT("Yes") : TEXT("No"));
+
             AddDamageNumber(DamagedActor->GetActorLocation(), ActualDamage, bIsEcho, DamageType);
         }
     }
+}
+
+void UTrinityFlowUIManager::OpenShardActivationUI(AShardAltar* Altar)
+{
+    if (!Altar)
+    {
+        return;
+    }
+    
+    ActiveAltar = Altar;
+    ShowShardAltarUI(Altar);
+    
+    // Subscribe to altar interaction end event
+    Altar->OnAltarInteractionEnded.AddDynamic(this, &UTrinityFlowUIManager::CloseShardActivationUI);
+}
+
+void UTrinityFlowUIManager::CloseShardActivationUI()
+{
+    if (ActiveAltar)
+    {
+        ActiveAltar->OnAltarInteractionEnded.RemoveDynamic(this, &UTrinityFlowUIManager::CloseShardActivationUI);
+        ActiveAltar = nullptr;
+    }
+    
+    ShowInGameHUD();
+}
+
+
+void UTrinityFlowUIManager::AddFloatingText(const FVector& WorldLocation, const FString& Text, const FLinearColor& Color)
+{
+    // For now, we'll just add this as a damage number with 0 damage
+    // In the future, we can create a dedicated floating text widget
+    AddDamageNumber(WorldLocation, 0.0f, false, EDamageType::Physical);
 }

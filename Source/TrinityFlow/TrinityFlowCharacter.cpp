@@ -10,7 +10,6 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
-#include "HUD/TrinityFlowHUD.h"
 #include "Core/HealthComponent.h"
 #include "Core/TagComponent.h"
 #include "Core/StateComponent.h"
@@ -29,7 +28,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "World/ShardAltar.h"
 #include "TrinityFlowGameMode.h"
-#include "HUD/TrinityFlowHUD.h"
+#include "UI/TrinityFlowUIManager.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -343,6 +342,19 @@ void ATrinityFlowCharacter::BeginPlay()
 	if (HealthComponent)
 	{
 		HealthComponent->OnDamageDealt.AddDynamic(this, &ATrinityFlowCharacter::OnAnyDamageDealt);
+		
+		// Subscribe to health changes to update UI
+		HealthComponent->OnHealthChanged.AddDynamic(this, &ATrinityFlowCharacter::OnHealthChanged);
+		
+		// Initial health update
+		if (UGameInstance* GameInstance = GetGameInstance())
+		{
+			if (UTrinityFlowUIManager* UIManager = GameInstance->GetSubsystem<UTrinityFlowUIManager>())
+			{
+				float HealthPercentage = HealthComponent->GetHealthPercentage();
+				UIManager->UpdatePlayerHealth(HealthPercentage);
+			}
+		}
 	}
 
 	// Setup AnimationComponent
@@ -407,6 +419,40 @@ void ATrinityFlowCharacter::Tick(float DeltaTime)
 			DefensiveWindowTimer = 0.0f;
 			PendingDamage = 0.0f;
 			PendingAttacker = nullptr;
+		}
+	}
+	
+	// Update UI with player stats periodically
+	static float UIUpdateTimer = 0.0f;
+	UIUpdateTimer += DeltaTime;
+	if (UIUpdateTimer >= 0.1f) // Update every 0.1 seconds
+	{
+		UIUpdateTimer = 0.0f;
+		
+		if (UGameInstance* GameInstance = GetGameInstance())
+		{
+			if (UTrinityFlowUIManager* UIManager = GameInstance->GetSubsystem<UTrinityFlowUIManager>())
+			{
+				// Update shard counts and damage bonuses
+				if (ShardComponent)
+				{
+					int32 SoulActive, SoulInactive, PowerActive, PowerInactive;
+					ShardComponent->GetShardCounts(SoulActive, SoulInactive, PowerActive, PowerInactive);
+					
+					// Get total damage bonuses (shard bonus + stance bonus)
+					float SoulBonus = ShardComponent->GetSoulDamageBonus();
+					float PhysicalBonus = ShardComponent->GetPhysicalDamageBonus();
+					
+					UIManager->UpdatePlayerStats(SoulActive, PowerActive, SoulInactive, PowerInactive, SoulBonus, PhysicalBonus);
+				}
+				
+				// Update combat state
+				if (StateComponent)
+				{
+					bool bInCombat = StateComponent->HasState(ECharacterState::Combat);
+					UIManager->UpdateCombatState(bInCombat);
+				}
+			}
 		}
 	}
 }
@@ -557,14 +603,13 @@ void ATrinityFlowCharacter::AbilityE()
 	}
 	
 	// First check if shard activation UI is open (handles both E and Triangle)
-	if (APlayerController* PC = Cast<APlayerController>(GetController()))
+	if (UGameInstance* GameInstance = GetGameInstance())
 	{
-		if (ATrinityFlowHUD* HUD = Cast<ATrinityFlowHUD>(PC->GetHUD()))
+		if (UTrinityFlowUIManager* UIManager = GameInstance->GetSubsystem<UTrinityFlowUIManager>())
 		{
-			if (HUD->IsShardActivationUIOpen())
+			if (UIManager->IsShardActivationUIOpen())
 			{
-				// Process shard activation
-				HUD->ProcessShardActivation();
+				// Shard activation UI is open, don't process other inputs
 				return;
 			}
 		}
@@ -578,13 +623,38 @@ void ATrinityFlowCharacter::AbilityE()
 		
 		if (CurrentAltar && CurrentAltar->CanActivate(this))
 		{
-			// Open the shard activation UI instead of auto-activating
-			if (APlayerController* PC = Cast<APlayerController>(GetController()))
+			// Play interaction animation first
+			if (AnimationComponent && AnimationComponent->PlayInteractionMontage())
 			{
-				if (ATrinityFlowHUD* HUD = Cast<ATrinityFlowHUD>(PC->GetHUD()))
+				UE_LOG(LogTemplateCharacter, Log, TEXT("Playing altar interaction montage"));
+				
+				// Open UI after 1 second delay
+				FTimerHandle AltarUITimer;
+				GetWorld()->GetTimerManager().SetTimer(AltarUITimer, [this]()
 				{
-					HUD->OpenShardActivationUI(CurrentAltar);
-					UE_LOG(LogTemplateCharacter, Log, TEXT("Opening shard activation UI"));
+					if (CurrentAltar) // Make sure altar is still valid
+					{
+						if (UGameInstance* GameInstance = GetGameInstance())
+						{
+							if (UTrinityFlowUIManager* UIManager = GameInstance->GetSubsystem<UTrinityFlowUIManager>())
+							{
+								UIManager->OpenShardActivationUI(CurrentAltar);
+								UE_LOG(LogTemplateCharacter, Log, TEXT("Opening shard activation UI after animation"));
+							}
+						}
+					}
+				}, 1.0f, false);
+			}
+			else
+			{
+				// If animation fails, open UI immediately
+				if (UGameInstance* GameInstance = GetGameInstance())
+				{
+					if (UTrinityFlowUIManager* UIManager = GameInstance->GetSubsystem<UTrinityFlowUIManager>())
+					{
+						UIManager->OpenShardActivationUI(CurrentAltar);
+						UE_LOG(LogTemplateCharacter, Log, TEXT("Opening shard activation UI (no animation)"));
+					}
 				}
 			}
 		}
@@ -769,22 +839,22 @@ void ATrinityFlowCharacter::RightDefensiveAbility()
 					}
 				}
 				
-				// Get HUD and add floating text above attacker
+				// Get UIManager and add floating text above attacker
 				if (PendingAttacker)
 				{
-					if (APlayerController* PC = Cast<APlayerController>(GetController()))
+					if (UGameInstance* GameInstance = GetGameInstance())
 					{
-						if (ATrinityFlowHUD* TrinityHUD = Cast<ATrinityFlowHUD>(PC->GetHUD()))
+						if (UTrinityFlowUIManager* UIManager = GameInstance->GetSubsystem<UTrinityFlowUIManager>())
 						{
 							// Add defense result text
 							FVector AttackerLocation = PendingAttacker->GetActorLocation() + FVector(0, 0, 100);
 							if (bIsPerfect)
 							{
-								TrinityHUD->AddFloatingText(AttackerLocation, TEXT("PERFECT DEFENSE!"), FLinearColor::Green);
+								UIManager->AddFloatingText(AttackerLocation, TEXT("PERFECT DEFENSE!"), FLinearColor::Green);
 							}
 							else
 							{
-								TrinityHUD->AddFloatingText(AttackerLocation, TEXT("BLOCKED!"), FLinearColor::Yellow);
+								UIManager->AddFloatingText(AttackerLocation, TEXT("BLOCKED!"), FLinearColor::Yellow);
 							}
 						}
 					}
@@ -813,12 +883,12 @@ void ATrinityFlowCharacter::RightDefensiveAbility()
 				// Show failed defense text above the attacker
 				if (PendingAttacker)
 				{
-					if (APlayerController* PC = Cast<APlayerController>(GetController()))
+					if (UGameInstance* GameInstance = GetGameInstance())
 					{
-						if (ATrinityFlowHUD* TrinityHUD = Cast<ATrinityFlowHUD>(PC->GetHUD()))
+						if (UTrinityFlowUIManager* UIManager = GameInstance->GetSubsystem<UTrinityFlowUIManager>())
 						{
 							FVector AttackerLocation = PendingAttacker->GetActorLocation() + FVector(0, 0, 100);
-							TrinityHUD->AddFloatingText(AttackerLocation, TEXT("FAILED!"), FLinearColor::Red);
+							UIManager->AddFloatingText(AttackerLocation, TEXT("FAILED!"), FLinearColor::Red);
 						}
 					}
 				}
@@ -923,6 +993,19 @@ void ATrinityFlowCharacter::OnStateChanged(ECharacterState NewState)
 	}
 }
 
+void ATrinityFlowCharacter::OnHealthChanged(float NewHealth)
+{
+	// Update UI with new health
+	if (UGameInstance* GameInstance = GetGameInstance())
+	{
+		if (UTrinityFlowUIManager* UIManager = GameInstance->GetSubsystem<UTrinityFlowUIManager>())
+		{
+			float HealthPercentage = HealthComponent ? HealthComponent->GetHealthPercentage() : 0.0f;
+			UIManager->UpdatePlayerHealth(HealthPercentage);
+		}
+	}
+}
+
 void ATrinityFlowCharacter::CheckForNearbyAltar()
 {
 	// Clear current altar first
@@ -948,11 +1031,11 @@ void ATrinityFlowCharacter::CheckForNearbyAltar()
 
 bool ATrinityFlowCharacter::IsUIBlockingInput() const
 {
-	if (APlayerController* PC = Cast<APlayerController>(GetController()))
+	if (UGameInstance* GameInstance = GetGameInstance())
 	{
-		if (ATrinityFlowHUD* HUD = Cast<ATrinityFlowHUD>(PC->GetHUD()))
+		if (UTrinityFlowUIManager* UIManager = GameInstance->GetSubsystem<UTrinityFlowUIManager>())
 		{
-			return HUD->IsShardActivationUIOpen();
+			return UIManager->IsShardActivationUIOpen();
 		}
 	}
 	return false;

@@ -311,16 +311,31 @@ void STrinityFlowShardAltar::Tick(const FGeometry& AllottedGeometry, const doubl
         float Progress = CurrentAltar->GetActivationProgress();
         UpdateActivationProgress(Progress);
         
-        if (Progress >= 1.0f)
+        // Check if activation is complete or if altar is no longer activating
+        if (Progress >= 1.0f || !CurrentAltar->IsActivating())
         {
             bIsActivating = false;
+            ActivationProgress = 0.0f;
+            
             if (ProgressOverlay.IsValid())
             {
                 ProgressOverlay->SetVisibility(EVisibility::Collapsed);
             }
-            if (UIManager)
+            
+            // Close the UI after a short delay to show completion
+            if (Progress >= 1.0f)
             {
-                UIManager->ShowInGameHUD();
+                FTimerHandle CloseTimer;
+                if (UIManager && UIManager->GetWorld())
+                {
+                    UIManager->GetWorld()->GetTimerManager().SetTimer(CloseTimer, [this]()
+                    {
+                        if (UIManager)
+                        {
+                            UIManager->ShowInGameHUD();
+                        }
+                    }, 0.5f, false);
+                }
             }
         }
     }
@@ -648,6 +663,25 @@ void STrinityFlowShardAltar::UpdateActivationDisplay()
             ActivationPromptText->SetColorAndOpacity(FSlateColor(FLinearColor::Gray));
         }
     }
+}
+
+bool STrinityFlowShardAltar::GetSelectedShardInfo(EShardType& OutType, int32& OutCount) const
+{
+    // Return the currently selected shard type and amount
+    if (bSelectingSoul && SoulAmount > 0)
+    {
+        OutType = EShardType::Soul;
+        OutCount = SoulAmount;
+        return true;
+    }
+    else if (!bSelectingSoul && PowerAmount > 0)
+    {
+        OutType = EShardType::Power;
+        OutCount = PowerAmount;
+        return true;
+    }
+    
+    return false;
 }
 
 #undef LOCTEXT_NAMESPACE

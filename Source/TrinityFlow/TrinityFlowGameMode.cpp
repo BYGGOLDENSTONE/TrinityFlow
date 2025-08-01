@@ -3,7 +3,6 @@
 #include "TrinityFlowGameMode.h"
 #include "TrinityFlowCharacter.h"
 #include "Player/TrinityFlowPlayerController.h"
-#include "HUD/TrinityFlowHUD.h"
 #include "UI/TrinityFlowUIManager.h"
 #include "UObject/ConstructorHelpers.h"
 #include "Engine/World.h"
@@ -14,7 +13,8 @@ ATrinityFlowGameMode::ATrinityFlowGameMode()
 	// Set default classes
 	DefaultPawnClass = ATrinityFlowCharacter::StaticClass();
 	PlayerControllerClass = ATrinityFlowPlayerController::StaticClass();
-	HUDClass = ATrinityFlowHUD::StaticClass();
+	// No HUD class - we're using UIManager for all UI
+	HUDClass = nullptr;
 }
 
 void ATrinityFlowGameMode::BeginPlay()

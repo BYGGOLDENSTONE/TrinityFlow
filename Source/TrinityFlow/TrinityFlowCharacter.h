@@ -133,6 +133,9 @@ public:
 
 	UFUNCTION()
 	void OnStateChanged(ECharacterState NewState);
+	
+	UFUNCTION()
+	void OnHealthChanged(float NewHealth);
 
 	/** Called when attack completes */
 	UFUNCTION()

@@ -14,8 +14,4 @@ public:
 
     virtual void BeginPlay() override;
     virtual void SetupInputComponent() override;
-
-protected:
-    UPROPERTY()
-    class ATrinityFlowHUD* TrinityFlowHUD;
 };

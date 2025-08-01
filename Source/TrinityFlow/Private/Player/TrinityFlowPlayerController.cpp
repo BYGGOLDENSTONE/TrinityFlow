@@ -1,5 +1,4 @@
 #include "Player/TrinityFlowPlayerController.h"
-#include "HUD/TrinityFlowHUD.h"
 #include "Engine/World.h"
 
 ATrinityFlowPlayerController::ATrinityFlowPlayerController()
@@ -10,12 +9,8 @@ ATrinityFlowPlayerController::ATrinityFlowPlayerController()
 void ATrinityFlowPlayerController::BeginPlay()
 {
     Super::BeginPlay();
-
-    // Set the HUD
-    if (GetWorld())
-    {
-        TrinityFlowHUD = Cast<ATrinityFlowHUD>(GetHUD());
-    }
+    
+    // No HUD setup needed - UIManager handles all UI
 }
 
 void ATrinityFlowPlayerController::SetupInputComponent()
