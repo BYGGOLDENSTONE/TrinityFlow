@@ -1,4 +1,5 @@
 #include "UI/TrinityFlowUIManager.h"
+#include "UI/TrinityFlowStyle.h"
 #include "UI/Slate/STrinityFlowMainMenu.h"
 #include "UI/Slate/STrinityFlowPauseMenu.h"
 #include "UI/Slate/STrinityFlowHUD.h"
@@ -9,10 +10,14 @@
 #include "Framework/Application/SlateApplication.h"
 #include "Kismet/GameplayStatics.h"
 #include "Engine/World.h"
+#include "Core/StateComponent.h"
 
 void UTrinityFlowUIManager::Initialize(FSubsystemCollectionBase& Collection)
 {
     Super::Initialize(Collection);
+    
+    // Initialize the style set
+    FTrinityFlowStyle::Initialize();
     
     CreateWidgets();
 }
@@ -25,6 +30,9 @@ void UTrinityFlowUIManager::Deinitialize()
     PauseMenuWidget.Reset();
     HUDWidget.Reset();
     ShardAltarWidget.Reset();
+    
+    // Shutdown the style set
+    FTrinityFlowStyle::Shutdown();
     
     Super::Deinitialize();
 }
@@ -206,5 +214,43 @@ void UTrinityFlowUIManager::UpdateWeaponCooldowns(float QCooldown, float TabCool
     if (HUDWidget.IsValid())
     {
         HUDWidget->UpdateWeaponCooldowns(QCooldown, TabCooldown, ECooldown, RCooldown);
+    }
+}
+
+void UTrinityFlowUIManager::RegisterEnemy(AEnemyBase* Enemy)
+{
+    if (Enemy)
+    {
+        RegisteredEnemies.AddUnique(Enemy);
+    }
+}
+
+void UTrinityFlowUIManager::UnregisterEnemy(AEnemyBase* Enemy)
+{
+    if (Enemy)
+    {
+        RegisteredEnemies.Remove(Enemy);
+    }
+}
+
+const TArray<AEnemyBase*>& UTrinityFlowUIManager::GetRegisteredEnemies() const
+{
+    return RegisteredEnemies;
+}
+
+void UTrinityFlowUIManager::OnDamageDealt(AActor* DamagedActor, float ActualDamage, AActor* DamageInstigator, EDamageType DamageType)
+{
+    if (APawn* PlayerPawn = UGameplayStatics::GetPlayerPawn(GetWorld(), 0))
+    {
+        if (DamageInstigator == PlayerPawn && DamagedActor)
+        {
+            bool bIsEcho = false;
+            if (UStateComponent* StateComp = DamagedActor->FindComponentByClass<UStateComponent>())
+            {
+                bIsEcho = StateComp->IsMarked() && DamageType == EDamageType::Soul;
+            }
+
+            AddDamageNumber(DamagedActor->GetActorLocation(), ActualDamage, bIsEcho, DamageType);
+        }
     }
 }

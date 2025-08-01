@@ -8,6 +8,8 @@ class UTrinityFlowUIManager;
 class STrinityFlowHealthBar;
 class STrinityFlowWeaponPanel;
 class STrinityFlowDamageNumber;
+class STrinityFlowEnemyInfoPanel;
+class AEnemyBase;
 
 /**
  * Main HUD Widget for TrinityFlow
@@ -32,6 +34,8 @@ public:
     void AddDamageNumber(const FVector& WorldLocation, float Damage, bool bIsEcho, EDamageType DamageType);
 
 private:
+    void UpdateEnemyInfoPanels(const FGeometry& AllottedGeometry);
+
     // Widget References
     TSharedPtr<STrinityFlowHealthBar> HealthBar;
     TSharedPtr<STrinityFlowWeaponPanel> LeftWeaponPanel;
@@ -39,6 +43,7 @@ private:
     TSharedPtr<class STextBlock> CombatStateText;
     TSharedPtr<class SVerticalBox> PlayerStatsBox;
     TSharedPtr<class SOverlay> DamageNumberOverlay;
+    TSharedPtr<class SOverlay> EnemyInfoOverlay;
     
     // Player stats text blocks
     TSharedPtr<class STextBlock> StanceText;
@@ -47,6 +52,9 @@ private:
     
     // Damage Numbers
     TArray<TSharedPtr<STrinityFlowDamageNumber>> DamageNumbers;
+
+    // Enemy Info Panels
+    TMap<AEnemyBase*, TSharedPtr<STrinityFlowEnemyInfoPanel>> EnemyInfoPanels;
     
     // UI Manager reference
     UTrinityFlowUIManager* UIManager = nullptr;

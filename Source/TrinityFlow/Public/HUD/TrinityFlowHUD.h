@@ -53,9 +53,6 @@ public:
     // Integration with new UI system
     void SetupSlateUI();
 
-    UFUNCTION()
-    void OnDamageDealt(AActor* DamagedActor, float ActualDamage, AActor* DamageInstigator, EDamageType DamageType);
-
     void AddFloatingDamageNumber(const FVector& Location, float Damage, bool bIsEcho = false, EDamageType DamageType = EDamageType::Physical);
     void AddFloatingText(const FVector& Location, const FString& Text, const FLinearColor& Color);
     
@@ -75,12 +72,9 @@ public:
 protected:
     void DrawHealthBar();
     void DrawCrosshair();
-    void DrawEnemyInfoAboveHeads();
-    void DrawEnemyInfo(class AEnemyBase* Enemy, float ScreenX, float ScreenY);
     void DrawPlayerInfo();
     void DrawCombatState();
     void DrawWeaponInfo();
-    void DrawNearbyEnemies();
     void DrawFloatingDamageNumbers();
     void DrawAltarInteractionUI();
     void DrawShardActivationPanel();

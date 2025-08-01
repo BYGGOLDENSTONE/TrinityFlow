@@ -6,7 +6,7 @@
 #include "Enemy/ShieldedTankRobotEnemy.h"
 #include "Engine/World.h"
 #include "TimerManager.h"
-#include "HUD/TrinityFlowHUD.h"
+#include "UI/TrinityFlowUIManager.h"
 #include "Core/HealthComponent.h"
 #include "Kismet/GameplayStatics.h"
 
@@ -37,16 +37,16 @@ void AEnemySpawner::SpawnEnemy()
         
         AEnemyBase* SpawnedEnemy = GetWorld()->SpawnActor<AEnemyBase>(EnemyClass, GetActorLocation(), GetActorRotation(), SpawnParams);
         
-        // Register damage events with HUD for damage numbers
+        // Register damage events with UI Manager for damage numbers
         if (SpawnedEnemy)
         {
-            if (APlayerController* PC = UGameplayStatics::GetPlayerController(GetWorld(), 0))
+            if (UGameInstance* GameInstance = GetGameInstance())
             {
-                if (ATrinityFlowHUD* HUD = Cast<ATrinityFlowHUD>(PC->GetHUD()))
+                if (UTrinityFlowUIManager* UIManager = GameInstance->GetSubsystem<UTrinityFlowUIManager>())
                 {
                     if (UHealthComponent* HealthComp = SpawnedEnemy->FindComponentByClass<UHealthComponent>())
                     {
-                        HealthComp->OnDamageDealt.AddDynamic(HUD, &ATrinityFlowHUD::OnDamageDealt);
+                        HealthComp->OnDamageDealt.AddDynamic(UIManager, &UTrinityFlowUIManager::OnDamageDealt);
                     }
                 }
             }

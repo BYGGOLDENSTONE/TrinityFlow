@@ -14,6 +14,7 @@
 #include "AI/EnemyAIController.h"
 #include "AI/AIState.h"
 #include "Enemy/EnemyAnimationComponent.h"
+#include "UI/TrinityFlowUIManager.h"
 #include "DrawDebugHelpers.h"
 #include "Engine/World.h"
 #include "Kismet/GameplayStatics.h"
@@ -100,6 +101,15 @@ void AEnemyBase::BeginPlay()
     {
         CombatManager->RegisterEnemy(this);
     }
+
+    // Register with UI manager
+    if (UGameInstance* GameInstance = GetGameInstance())
+    {
+        if (UTrinityFlowUIManager* UIManager = GameInstance->GetSubsystem<UTrinityFlowUIManager>())
+        {
+            UIManager->RegisterEnemy(this);
+        }
+    }
     
     // Register damage events with player for echo system
     // Do this with a small delay to ensure everything is initialized
@@ -119,6 +129,20 @@ void AEnemyBase::BeginPlay()
             UE_LOG(LogTemp, Warning, TEXT("Enemy %s could not find player target"), *GetName());
         }
     }, 0.1f, false);
+}
+
+void AEnemyBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+    Super::EndPlay(EndPlayReason);
+
+    // Unregister from UI manager
+    if (UGameInstance* GameInstance = GetGameInstance())
+    {
+        if (UTrinityFlowUIManager* UIManager = GameInstance->GetSubsystem<UTrinityFlowUIManager>())
+        {
+            UIManager->UnregisterEnemy(this);
+        }
+    }
 }
 
 void AEnemyBase::Tick(float DeltaTime)

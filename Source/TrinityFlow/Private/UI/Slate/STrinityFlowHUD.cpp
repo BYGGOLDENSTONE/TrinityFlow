@@ -1,8 +1,10 @@
 #include "UI/Slate/STrinityFlowHUD.h"
 #include "UI/TrinityFlowUIManager.h"
+#include "UI/TrinityFlowStyle.h"
 #include "UI/Slate/STrinityFlowHealthBar.h"
 #include "UI/Slate/STrinityFlowWeaponPanel.h"
 #include "UI/Slate/STrinityFlowDamageNumber.h"
+#include "UI/Slate/STrinityFlowEnemyInfoPanel.h"
 #include "Widgets/SBoxPanel.h"
 #include "Widgets/SOverlay.h"
 #include "Widgets/Layout/SBox.h"
@@ -11,18 +13,28 @@
 #include "Widgets/Text/STextBlock.h"
 #include "Widgets/Images/SImage.h"
 #include "Engine/World.h"
-#include "Styling/CoreStyle.h"
+#include "GameFramework/PlayerController.h"
+#include "Enemy/EnemyBase.h"
 
 #define LOCTEXT_NAMESPACE "TrinityFlowHUD"
 
 void STrinityFlowHUD::Construct(const FArguments& InArgs)
 {
     UIManager = InArgs._UIManager;
+    const ISlateStyle* Style = &FTrinityFlowStyle::Get();
 
     ChildSlot
     [
         SNew(SOverlay)
         
+        // Enemy Info Panels Layer
+        + SOverlay::Slot()
+        .HAlign(HAlign_Fill)
+        .VAlign(VAlign_Fill)
+        [
+            SAssignNew(EnemyInfoOverlay, SOverlay)
+        ]
+
         // Damage Numbers Layer
         + SOverlay::Slot()
         .HAlign(HAlign_Fill)
@@ -59,7 +71,7 @@ void STrinityFlowHUD::Construct(const FArguments& InArgs)
             [
                 SAssignNew(LeftWeaponPanel, STrinityFlowWeaponPanel)
                 .WeaponName(FText::FromString("Override Katana"))
-                .WeaponColor(FLinearColor(0.0f, 0.5f, 1.0f))
+                .WeaponColor(Style->GetColor("TrinityFlow.Color.Soul"))
                 .AbilityKey1(FText::FromString("Q"))
                 .AbilityKey2(FText::FromString("Tab"))
             ]
@@ -73,8 +85,7 @@ void STrinityFlowHUD::Construct(const FArguments& InArgs)
                 .HeightOverride(80)
                 [
                     SNew(SBorder)
-                    .BorderImage(FCoreStyle::Get().GetBrush("GenericWhiteBox"))
-                    .BorderBackgroundColor(FLinearColor(0.5f, 0.5f, 0.5f, 0.5f))
+                    .BorderImage(Style->GetBrush("TrinityFlow.Brush.Separator"))
                 ]
             ]
             
@@ -85,7 +96,7 @@ void STrinityFlowHUD::Construct(const FArguments& InArgs)
             [
                 SAssignNew(RightWeaponPanel, STrinityFlowWeaponPanel)
                 .WeaponName(FText::FromString("Physical Katana"))
-                .WeaponColor(FLinearColor(1.0f, 0.5f, 0.0f))
+                .WeaponColor(Style->GetColor("TrinityFlow.Color.Power"))
                 .AbilityKey1(FText::FromString("E"))
                 .AbilityKey2(FText::FromString("R"))
             ]
@@ -98,14 +109,13 @@ void STrinityFlowHUD::Construct(const FArguments& InArgs)
         .Padding(0, 50, 0, 0)
         [
             SNew(SBorder)
-            .BorderImage(FCoreStyle::Get().GetBrush("ToolPanel.GroupBorder"))
-            .BorderBackgroundColor(FLinearColor(0.0f, 0.0f, 0.0f, 0.5f))
+            .BorderImage(Style->GetBrush("TrinityFlow.Brush.ToolPanel"))
             .Padding(20, 10)
             [
                 SAssignNew(CombatStateText, STextBlock)
                 .Text(LOCTEXT("NonCombat", "NON-COMBAT"))
-                .Font(FSlateFontInfo(FPaths::EngineContentDir() / TEXT("Slate/Fonts/Roboto-Bold.ttf"), 24))
-                .ColorAndOpacity(FSlateColor(FLinearColor::Green))
+                .TextStyle(&Style->GetWidgetStyle<FTextBlockStyle>("TrinityFlow.Font.Bold"))
+                .ColorAndOpacity(Style->GetColor("TrinityFlow.Color.Positive"))
                 .ShadowOffset(FVector2D(1, 1))
                 .ShadowColorAndOpacity(FLinearColor::Black)
             ]
@@ -118,8 +128,7 @@ void STrinityFlowHUD::Construct(const FArguments& InArgs)
         .Padding(20, 0, 0, 140)
         [
             SNew(SBorder)
-            .BorderImage(FCoreStyle::Get().GetBrush("ToolPanel.GroupBorder"))
-            .BorderBackgroundColor(FLinearColor(0.0f, 0.0f, 0.0f, 0.5f))
+            .BorderImage(Style->GetBrush("TrinityFlow.Brush.ToolPanel"))
             .Padding(15)
             [
                 SAssignNew(PlayerStatsBox, SVerticalBox)
@@ -129,8 +138,8 @@ void STrinityFlowHUD::Construct(const FArguments& InArgs)
                 [
                     SAssignNew(StanceText, STextBlock)
                     .Text(LOCTEXT("BalancedStance", "Stance: Balanced"))
-                    .Font(FSlateFontInfo(FPaths::EngineContentDir() / TEXT("Slate/Fonts/Roboto-Regular.ttf"), 14))
-                    .ColorAndOpacity(FSlateColor(FLinearColor(0.8f, 0.2f, 1.0f)))
+                    .TextStyle(&Style->GetWidgetStyle<FTextBlockStyle>("TrinityFlow.Font.Regular"))
+                    .ColorAndOpacity(Style->GetColor("TrinityFlow.Color.Balanced"))
                 ]
                 
                 // Shards
@@ -140,8 +149,8 @@ void STrinityFlowHUD::Construct(const FArguments& InArgs)
                 [
                     SAssignNew(ShardsText, STextBlock)
                     .Text(LOCTEXT("Shards", "Shards: 0 Soul / 0 Power"))
-                    .Font(FSlateFontInfo(FPaths::EngineContentDir() / TEXT("Slate/Fonts/Roboto-Regular.ttf"), 14))
-                    .ColorAndOpacity(FSlateColor(FLinearColor::White))
+                    .TextStyle(&Style->GetWidgetStyle<FTextBlockStyle>("TrinityFlow.Font.Regular"))
+                    .ColorAndOpacity(Style->GetColor("TrinityFlow.Color.Neutral"))
                 ]
                 
                 // Damage Bonuses
@@ -151,8 +160,8 @@ void STrinityFlowHUD::Construct(const FArguments& InArgs)
                 [
                     SAssignNew(DamageBonusText, STextBlock)
                     .Text(LOCTEXT("DamageBonus", "Damage: +0% Soul / +0% Physical"))
-                    .Font(FSlateFontInfo(FPaths::EngineContentDir() / TEXT("Slate/Fonts/Roboto-Regular.ttf"), 14))
-                    .ColorAndOpacity(FSlateColor(FLinearColor::Yellow))
+                    .TextStyle(&Style->GetWidgetStyle<FTextBlockStyle>("TrinityFlow.Font.Regular"))
+                    .ColorAndOpacity(FLinearColor::Yellow)
                 ]
             ]
         ]
@@ -167,8 +176,7 @@ void STrinityFlowHUD::Construct(const FArguments& InArgs)
             .HeightOverride(10)
             [
                 SNew(SBorder)
-                .BorderImage(FCoreStyle::Get().GetBrush("GenericWhiteBox"))
-                .BorderBackgroundColor(FLinearColor::White)
+                .BorderImage(Style->GetBrush("TrinityFlow.Brush.White"))
             ]
         ]
     ];
@@ -178,6 +186,8 @@ void STrinityFlowHUD::Tick(const FGeometry& AllottedGeometry, const double InCur
 {
     SCompoundWidget::Tick(AllottedGeometry, InCurrentTime, InDeltaTime);
     
+    UpdateEnemyInfoPanels(AllottedGeometry);
+
     // Update damage numbers
     for (int32 i = DamageNumbers.Num() - 1; i >= 0; i--)
     {
@@ -288,6 +298,67 @@ void STrinityFlowHUD::AddDamageNumber(const FVector& WorldLocation, float Damage
     ];
     
     DamageNumbers.Add(NewDamageNumber);
+}
+
+void STrinityFlowHUD::UpdateEnemyInfoPanels(const FGeometry& AllottedGeometry)
+{
+    if (!UIManager || !UIManager->GetWorld())
+    {
+        return;
+    }
+
+    const TArray<AEnemyBase*>& Enemies = UIManager->GetRegisteredEnemies();
+    TSet<AEnemyBase*> CurrentEnemies(Enemies);
+    TSet<AEnemyBase*> KnownEnemies;
+    for (auto const& [Enemy, Panel] : EnemyInfoPanels)
+    {
+        KnownEnemies.Add(Enemy);
+    }
+
+    // Remove panels for enemies that are no longer registered
+    TSet<AEnemyBase*> EnemiesToRemove = KnownEnemies.Difference(CurrentEnemies);
+    for (AEnemyBase* Enemy : EnemiesToRemove)
+    {
+        if (EnemyInfoPanels.Contains(Enemy))
+        {
+            EnemyInfoOverlay->RemoveSlot(EnemyInfoPanels[Enemy].ToSharedRef());
+            EnemyInfoPanels.Remove(Enemy);
+        }
+    }
+
+    // Add panels for new enemies and update existing ones
+    for (AEnemyBase* Enemy : Enemies)
+    {
+        TSharedPtr<STrinityFlowEnemyInfoPanel> Panel = EnemyInfoPanels.FindRef(Enemy);
+        if (!Panel.IsValid())
+        {
+            SAssignNew(Panel, STrinityFlowEnemyInfoPanel).Enemy(Enemy);
+            EnemyInfoOverlay->AddSlot()
+            .HAlign(HAlign_Left)
+            .VAlign(VAlign_Top)
+            [
+                Panel.ToSharedRef()
+            ];
+            EnemyInfoPanels.Add(Enemy, Panel);
+        }
+
+        // Update panel position and content
+        FVector2D ScreenPosition;
+        if (APlayerController* PC = UIManager->GetWorld()->GetFirstPlayerController())
+        {
+            if (PC->ProjectWorldLocationToScreen(Enemy->GetActorLocation() + FVector(0, 0, 100), ScreenPosition))
+            {
+                Panel->SetVisibility(EVisibility::Visible);
+                // Use RenderTransform to position the panel
+                Panel->SetRenderTransform(FSlateRenderTransform(ScreenPosition));
+                Panel->Update();
+            }
+            else
+            {
+                Panel->SetVisibility(EVisibility::Hidden);
+            }
+        }
+    }
 }
 
 #undef LOCTEXT_NAMESPACE

@@ -21,6 +21,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnDamageNumber, const FVector&, Wo
 
 // Forward declarations
 class AShardAltar;
+class AEnemyBase;
 
 /**
  * Central UI Manager for TrinityFlow
@@ -69,6 +70,14 @@ public:
     UFUNCTION(BlueprintCallable, Category = "UI")
     void UpdateWeaponCooldowns(float QCooldown, float TabCooldown, float ECooldown, float RCooldown);
 
+    UFUNCTION()
+    void OnDamageDealt(AActor* DamagedActor, float ActualDamage, AActor* DamageInstigator, EDamageType DamageType);
+
+    // Enemy Registry
+    void RegisterEnemy(AEnemyBase* Enemy);
+    void UnregisterEnemy(AEnemyBase* Enemy);
+    const TArray<AEnemyBase*>& GetRegisteredEnemies() const;
+
     // Events
     UPROPERTY(BlueprintAssignable, Category = "UI")
     FOnUIStateChanged OnUIStateChanged;
@@ -88,6 +97,9 @@ protected:
 
     // Viewport slot for current widget
     TSharedPtr<class SWeakWidget> CurrentWidgetContainer;
+
+    // Enemy Registry
+    TArray<AEnemyBase*> RegisteredEnemies;
 
     void CreateWidgets();
     void ShowWidget(TSharedPtr<SWidget> Widget);
