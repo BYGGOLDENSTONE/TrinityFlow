@@ -53,18 +53,15 @@ void UHealthComponent::TakeDamage(const FDamageInfo& DamageInfo, const FVector& 
         OnDamageDealt.Broadcast(GetOwner(), ActualDamageDealt, DamageInfo.Instigator, DamageInfo.Type);
         
         // Play hit response animation
-        if (AActor* Owner = GetOwner())
+        // Check for player animation component
+        if (UAnimationComponent* AnimComp = Owner->FindComponentByClass<UAnimationComponent>())
         {
-            // Check for player animation component
-            if (UAnimationComponent* AnimComp = Owner->FindComponentByClass<UAnimationComponent>())
-            {
-                AnimComp->PlayHitResponse();
-            }
-            // Check for enemy animation component
-            else if (UEnemyAnimationComponent* EnemyAnimComp = Owner->FindComponentByClass<UEnemyAnimationComponent>())
-            {
-                EnemyAnimComp->PlayHitResponse(DamageInfo.Type, DamageInfo.bIsLeftWeapon);
-            }
+            AnimComp->PlayHitResponse();
+        }
+        // Check for enemy animation component
+        else if (UEnemyAnimationComponent* EnemyAnimComp = Owner->FindComponentByClass<UEnemyAnimationComponent>())
+        {
+            EnemyAnimComp->PlayHitResponse(DamageInfo.Type, DamageInfo.bIsLeftWeapon);
         }
         
         if (!IsAlive())

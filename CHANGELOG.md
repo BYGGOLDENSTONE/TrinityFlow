@@ -27,6 +27,11 @@ All notable changes to TrinityFlow are documented in this file.
   - Enhanced memory management with proper cleanup in destructors
   - Fixed defense calculation to guarantee minimum 5% damage throughput
 
+### Removed
+- **3D Health Bar System**: Removed C++ implementation of 3D health bar component
+  - Removed Player3DHealthBarComponent and related Slate/UMG classes
+  - System will be reimplemented entirely in Blueprint for better visual control
+
 ## [Latest] - 2025-08-02
 
 ### Added
