@@ -2,6 +2,31 @@
 
 All notable changes to TrinityFlow are documented in this file.
 
+## [Unreleased] - 2025-08-02
+
+### Fixed
+- **Critical Stability Fixes**:
+  - Fixed null pointer crashes in HealthComponent when owner is not set
+  - Fixed null pointer crash in TrinityFlowCharacter::GetTargetInSight when controller is null
+  - Fixed null pointer vulnerabilities in CombatComponent during object destruction
+  - Fixed timer handle memory leaks in WeaponBase by properly clearing timers on destruction
+  - Fixed invulnerability bug where enemies with 100+ defense took zero damage
+  - Fixed race condition in defensive ability state management with atomic transitions
+
+### Changed
+- **Performance Optimizations**:
+  - Optimized StanceComponent with circular buffer to eliminate O(n) array operations
+  - Wrapped all debug rendering in `#if !UE_BUILD_SHIPPING` conditionals for production builds
+  - Added visibility trace caching to EnemyBase (0.2s cache) to reduce expensive line traces
+  - Converted UI updates from tick-based (10Hz) to event-driven for better performance
+
+### Improved
+- **Code Quality**:
+  - Added proper null checks throughout critical systems
+  - Implemented centralized state management for defensive abilities
+  - Enhanced memory management with proper cleanup in destructors
+  - Fixed defense calculation to guarantee minimum 5% damage throughput
+
 ## [Latest] - 2025-08-02
 
 ### Added

@@ -14,6 +14,9 @@ void UStanceComponent::BeginPlay()
 {
     Super::BeginPlay();
     
+    // Pre-allocate circular buffer
+    RecentAttacks.SetNum(MaxRecentAttacks);
+    
     // Initialize with current stance
     UpdateStanceFromFlow();
     BroadcastStanceChange(CurrentStance);
@@ -24,14 +27,15 @@ void UStanceComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActo
     Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
     
     // Update attack pattern timer
-    if (RecentAttacks.Num() > 0)
+    if (AttackCount > 0)
     {
         TimeSinceLastAttack += DeltaTime;
         
         // Reset attack pattern if too much time has passed
         if (TimeSinceLastAttack >= AttackResetTime)
         {
-            RecentAttacks.Empty();
+            AttackCount = 0;
+            AttackBufferIndex = 0;
             TimeSinceLastAttack = 0.0f;
         }
     }
@@ -51,25 +55,30 @@ void UStanceComponent::OnAttackExecuted(bool bIsLeftAttack)
     // Reset timer
     TimeSinceLastAttack = 0.0f;
     
-    // Add to recent attacks
-    RecentAttacks.Add(bIsLeftAttack);
+    // Add to circular buffer
+    RecentAttacks[AttackBufferIndex] = bIsLeftAttack;
+    AttackBufferIndex = (AttackBufferIndex + 1) % MaxRecentAttacks;
     
-    // Keep only last 4 attacks for pattern detection
-    if (RecentAttacks.Num() > 4)
+    // Update attack count
+    if (AttackCount < MaxRecentAttacks)
     {
-        RecentAttacks.RemoveAt(0);
+        AttackCount++;
     }
     
     // Calculate flow change
     float FlowChange = FlowSpeed;
     
     // Check for consecutive attacks
-    if (RecentAttacks.Num() >= 2)
+    if (AttackCount >= 2)
     {
         int32 ConsecutiveCount = 1;
-        for (int32 i = RecentAttacks.Num() - 2; i >= 0; i--)
+        int32 CheckCount = FMath::Min(AttackCount - 1, MaxRecentAttacks - 1);
+        
+        for (int32 i = 0; i < CheckCount; i++)
         {
-            if (RecentAttacks[i] == bIsLeftAttack)
+            // Calculate index in circular buffer (going backwards)
+            int32 Index = (AttackBufferIndex - 2 - i + MaxRecentAttacks) % MaxRecentAttacks;
+            if (RecentAttacks[Index] == bIsLeftAttack)
             {
                 ConsecutiveCount++;
             }
@@ -149,18 +158,22 @@ void UStanceComponent::UpdateStanceFromFlow()
 
 bool UStanceComponent::IsAlternatingPattern() const
 {
-    if (RecentAttacks.Num() < 2)
+    if (AttackCount < 2)
     {
         return false;
     }
     
     // Check if recent attacks are alternating
-    for (int32 i = 1; i < RecentAttacks.Num(); i++)
+    int32 CheckCount = FMath::Min(AttackCount, MaxRecentAttacks);
+    for (int32 i = 1; i < CheckCount; i++)
     {
-        if (RecentAttacks[i] == RecentAttacks[i - 1])
+        int32 CurrentIndex = (AttackBufferIndex - i + MaxRecentAttacks) % MaxRecentAttacks;
+        int32 PrevIndex = (AttackBufferIndex - i - 1 + MaxRecentAttacks) % MaxRecentAttacks;
+        
+        if (RecentAttacks[CurrentIndex] == RecentAttacks[PrevIndex])
         {
             // Found consecutive same-side attacks
-            if (i == 1 || i == RecentAttacks.Num() - 1)
+            if (i == 1 || i == CheckCount - 1)
             {
                 // Allow one consecutive at start or end
                 continue;

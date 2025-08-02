@@ -67,8 +67,11 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Flow")
     float ConsecutiveAttackMultiplier = 1.5f; // Speed multiplier for consecutive same-side attacks
     
-    // Attack tracking
-    TArray<bool> RecentAttacks; // Track last few attacks (true = left, false = right)
+    // Attack tracking with circular buffer for better performance
+    static constexpr int32 MaxRecentAttacks = 4;
+    TArray<bool> RecentAttacks; // Circular buffer for attacks (true = left, false = right)
+    int32 AttackBufferIndex = 0; // Current position in circular buffer
+    int32 AttackCount = 0; // Number of attacks stored
     float TimeSinceLastAttack = 0.0f;
     
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Flow")

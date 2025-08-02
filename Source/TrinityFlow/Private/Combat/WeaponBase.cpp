@@ -88,7 +88,9 @@ void AWeaponBase::BasicAttack(AActor* Target)
     }
 
     // Draw debug for attack wind-up
+#if !UE_BUILD_SHIPPING
     DrawDebugLine(GetWorld(), GetActorLocation(), Target->GetActorLocation(), FColor::Orange, false, BasicAttackDamageDelay, 0, 2.0f);
+#endif
 }
 
 void AWeaponBase::ExecuteBasicAttack(AActor* Target)
@@ -161,7 +163,9 @@ void AWeaponBase::ExecuteBasicAttack(AActor* Target)
         TargetHealth->TakeDamage(DamageInfo, DamageDirection);
 
         // Draw debug for successful hit
+#if !UE_BUILD_SHIPPING
         DrawDebugLine(GetWorld(), GetActorLocation(), Target->GetActorLocation(), FColor::Red, false, 0.5f, 0, 3.0f);
+#endif
     }
 
     // Clear pending target
@@ -171,4 +175,26 @@ void AWeaponBase::ExecuteBasicAttack(AActor* Target)
 void AWeaponBase::StartCooldown(float& Timer, float Cooldown)
 {
     Timer = Cooldown;
+}
+
+void AWeaponBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+    // Clear all active timers
+    if (UWorld* World = GetWorld())
+    {
+        World->GetTimerManager().ClearTimer(AttackTimerHandle);
+    }
+    
+    Super::EndPlay(EndPlayReason);
+}
+
+void AWeaponBase::BeginDestroy()
+{
+    // Additional cleanup in case EndPlay wasn't called
+    if (UWorld* World = GetWorld())
+    {
+        World->GetTimerManager().ClearTimer(AttackTimerHandle);
+    }
+    
+    Super::BeginDestroy();
 }

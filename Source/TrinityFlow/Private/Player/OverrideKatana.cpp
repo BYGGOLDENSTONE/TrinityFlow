@@ -109,8 +109,10 @@ void AOverrideKatana::AbilityQ(AActor* Target)
         FVector DamageDirection = (Target->GetActorLocation() - GetActorLocation()).GetSafeNormal();
         TargetHealth->TakeDamage(DamageInfo, DamageDirection);
 
+#if !UE_BUILD_SHIPPING
         // Visual feedback
         DrawDebugLine(GetWorld(), GetActorLocation(), Target->GetActorLocation(), FColor::Cyan, false, 0.5f, 0, 5.0f);
+#endif
     }
 
     StartCooldown(AbilityQCooldownTimer, AbilityQCooldown);
@@ -143,8 +145,10 @@ void AOverrideKatana::AbilityTab(AActor* Target)
 
     StartCooldown(AbilityECooldownTimer, AbilityECooldown);  // Using E cooldown for Tab
 
+#if !UE_BUILD_SHIPPING
     // Visual feedback
     DrawDebugLine(GetWorld(), GetActorLocation(), Target->GetActorLocation(), FColor::Purple, false, 1.0f, 0, 3.0f);
+#endif
 }
 
 void AOverrideKatana::DefensiveAbility()
@@ -171,8 +175,10 @@ void AOverrideKatana::OnPerfectDodge()
     // Reset Code Break cooldown on perfect dodge
     AbilityECooldownTimer = 0.0f;
 
+#if !UE_BUILD_SHIPPING
     // Visual feedback
     DrawDebugSphere(GetWorld(), GetActorLocation(), 100.0f, 12, FColor::Green, false, 0.5f);
+#endif
 }
 
 void AOverrideKatana::Tick(float DeltaTime)

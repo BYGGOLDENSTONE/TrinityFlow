@@ -14,7 +14,14 @@ void UHealthComponent::BeginPlay()
 {
     Super::BeginPlay();
     
-    TagComponent = GetOwner()->FindComponentByClass<UTagComponent>();
+    if (AActor* Owner = GetOwner())
+    {
+        TagComponent = Owner->FindComponentByClass<UTagComponent>();
+    }
+    else
+    {
+        UE_LOG(LogTemp, Warning, TEXT("HealthComponent: No owner found during BeginPlay"));
+    }
 }
 
 void UHealthComponent::TakeDamage(const FDamageInfo& DamageInfo, const FVector& DamageDirection)
@@ -24,8 +31,15 @@ void UHealthComponent::TakeDamage(const FDamageInfo& DamageInfo, const FVector& 
         return;
     }
     
+    AActor* Owner = GetOwner();
+    if (!Owner)
+    {
+        UE_LOG(LogTemp, Error, TEXT("HealthComponent: No owner found when taking damage"));
+        return;
+    }
+    
     ECharacterTag Tags = TagComponent ? TagComponent->GetTags() : ECharacterTag::None;
-    FVector OwnerForward = GetOwner()->GetActorForwardVector();
+    FVector OwnerForward = Owner->GetActorForwardVector();
     
     float FinalDamage = FDamageCalculator::CalculateDamage(DamageInfo, Resources, Tags, DamageDirection, OwnerForward);
     

@@ -109,6 +109,7 @@ void APhysicalKatana::Tick(float DeltaTime)
         // Check if stats are loaded
         if (PhysicalKatanaStats)
         {
+#if !UE_BUILD_SHIPPING
             // Visual feedback for timing window
             if (OrderWindowTimer <= PhysicalKatanaStats->PerfectOrderStart)
             {
@@ -120,6 +121,7 @@ void APhysicalKatana::Tick(float DeltaTime)
                 // Perfect window - green
                 DrawDebugSphere(GetWorld(), GetActorLocation(), 100.0f, 12, FColor::Green, false, 0.1f);
             }
+#endif
             else
             {
                 // Window expired
@@ -133,6 +135,7 @@ void APhysicalKatana::Tick(float DeltaTime)
             const float DefaultPerfectOrderStart = 0.75f;
             const float DefaultOrderWindowDuration = 1.5f;
             
+#if !UE_BUILD_SHIPPING
             if (OrderWindowTimer <= DefaultPerfectOrderStart)
             {
                 DrawDebugSphere(GetWorld(), GetActorLocation(), 80.0f, 12, FColor::Orange, false, 0.1f);
@@ -141,6 +144,7 @@ void APhysicalKatana::Tick(float DeltaTime)
             {
                 DrawDebugSphere(GetWorld(), GetActorLocation(), 100.0f, 12, FColor::Green, false, 0.1f);
             }
+#endif
             else
             {
                 bOrderWindowActive = false;
@@ -223,8 +227,10 @@ void APhysicalKatana::PerformCounterAttack(AActor* Target)
     
     UE_LOG(LogTemp, Log, TEXT("Order Counter Attack on %s"), *Target->GetName());
     
+#if !UE_BUILD_SHIPPING
     // Visual feedback
     DrawDebugLine(GetWorld(), GetActorLocation(), Target->GetActorLocation(), FColor::Yellow, false, 1.0f, 0, 3.0f);
+#endif
     
     // Use default armor reduction if stats not loaded
     const float DefaultCounterArmorReduction = 0.25f;

@@ -226,6 +226,7 @@ void UAIState_Chase::UpdatePath()
 	}
 	
 
+#if !UE_BUILD_SHIPPING
 	#if WITH_EDITOR
 	if (CachedEnemy->GetWorld()->WorldType == EWorldType::Editor)
 	{
@@ -240,6 +241,7 @@ void UAIState_Chase::UpdatePath()
 		}
 	}
 	#endif
+#endif
 }
 
 bool UAIState_Chase::IsInAttackRange()

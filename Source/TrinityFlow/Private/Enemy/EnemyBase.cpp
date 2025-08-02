@@ -249,13 +249,23 @@ bool AEnemyBase::CanSeePlayer()
         return false;
     }
 
+    // Quick distance check before expensive trace
     float DistanceToPlayer = FVector::Dist(GetActorLocation(), PlayerTarget->GetActorLocation());
     if (DistanceToPlayer > SightRange)
     {
         return false;
     }
 
-    // Line trace to check visibility
+    // Check cache validity
+    float CurrentTime = GetWorld()->GetTimeSeconds();
+    if (CurrentTime - LastVisibilityCheck < VisibilityCacheTime)
+    {
+        return bCachedCanSeePlayer;
+    }
+
+    // Perform line trace and cache result
+    LastVisibilityCheck = CurrentTime;
+
     FHitResult Hit;
     FCollisionQueryParams QueryParams;
     QueryParams.AddIgnoredActor(this);
@@ -268,7 +278,8 @@ bool AEnemyBase::CanSeePlayer()
         QueryParams
     );
 
-    return !bHit || Hit.GetActor() == PlayerTarget;
+    bCachedCanSeePlayer = !bHit || Hit.GetActor() == PlayerTarget;
+    return bCachedCanSeePlayer;
 }
 
 void AEnemyBase::UpdateCombatState()
@@ -285,10 +296,12 @@ void AEnemyBase::AttackPlayer()
 
 void AEnemyBase::OnHealthChanged(float NewHealth)
 {
+#if !UE_BUILD_SHIPPING
     // Visual feedback
     DrawDebugString(GetWorld(), GetActorLocation() + FVector(0, 0, 150), 
                    FString::Printf(TEXT("HP: %.0f"), NewHealth), 
                    nullptr, FColor::White, 0.5f);
+#endif
 }
 
 void AEnemyBase::OnDeathEvent()

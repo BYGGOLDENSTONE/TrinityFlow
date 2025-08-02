@@ -17,7 +17,14 @@ void UCombatComponent::BeginPlay()
 {
     Super::BeginPlay();
     
-    OwnerHealthComponent = GetOwner()->FindComponentByClass<UHealthComponent>();
+    if (AActor* Owner = GetOwner())
+    {
+        OwnerHealthComponent = Owner->FindComponentByClass<UHealthComponent>();
+    }
+    else
+    {
+        UE_LOG(LogTemp, Error, TEXT("CombatComponent: No owner found during BeginPlay"));
+    }
 }
 
 void UCombatComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
@@ -35,9 +42,19 @@ void UCombatComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActo
     {
         CastingTimer += DeltaTime;
         
+        // Ensure owner and target are still valid
+        AActor* Owner = GetOwner();
+        if (!Owner || !IsValid(CurrentTarget))
+        {
+            bIsCasting = false;
+            CastingTimer = 0.0f;
+            CurrentTarget = nullptr;
+            return;
+        }
+        
         // Draw debug line for attack casting with color-coded timing windows
         // Get head position (approximate by adding height offset)
-        FVector StartLocation = GetOwner()->GetActorLocation();
+        FVector StartLocation = Owner->GetActorLocation();
         StartLocation.Z += 150.0f; // Approximate head height
         
         FVector EndLocation = CurrentTarget->GetActorLocation();
@@ -63,15 +80,19 @@ void UCombatComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActo
             LineThickness = 4.0f + ((CastingTimer - 0.75f) * 3.0f); // Larger growing thickness
             
             // Add extra visual feedback for perfect window
+#if !UE_BUILD_SHIPPING
             DrawDebugSphere(GetWorld(), CurrentEndLocation, 10.0f, 8, LineColor, false, DeltaTime * 2.0f);
+#endif
         }
         
+#if !UE_BUILD_SHIPPING
         DrawDebugLine(GetWorld(), StartLocation, CurrentEndLocation, LineColor, false, DeltaTime * 2.0f, 0, LineThickness);
         
         // Add text indicator above enemy
         FVector TextLocation = StartLocation + FVector(0, 0, 30);
         FString TimingText = CastingTimer <= 0.75f ? TEXT("MODERATE") : TEXT("PERFECT!");
         DrawDebugString(GetWorld(), TextLocation, TimingText, nullptr, LineColor, DeltaTime * 2.0f);
+#endif
         
         if (CastingTimer >= CastingTime)
         {

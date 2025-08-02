@@ -118,6 +118,13 @@ public:
 	// Defensive ability handling
 	UFUNCTION()
 	void OnIncomingAttack(AActor* Attacker, float Damage, EDamageType DamageType);
+	
+	// Atomic state transition for defensive ability
+	void EndDefensiveAbility();
+	
+	// Event-driven UI updates
+	void UpdatePlayerStatsUI();
+	void UpdateCombatStateUI();
 
 	UFUNCTION()
 	bool IsDefensiveAbilityActive() const { return bDefensiveAbilityActive; }

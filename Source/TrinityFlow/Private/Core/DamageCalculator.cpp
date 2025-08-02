@@ -21,7 +21,9 @@ float FDamageCalculator::CalculateDamage(const FDamageInfo& DamageInfo, const FC
             }
             
             // Physical damage calculation: attackpoint * (100 - defencepoint)%
-            float DefenceMultiplier = FMath::Max(0.0f, 100.0f - TargetResources.DefencePoint) / 100.0f;
+            // Clamp defense to max 95 to ensure at least 5% damage gets through
+            float ClampedDefence = FMath::Min(TargetResources.DefencePoint, 95.0f);
+            float DefenceMultiplier = (100.0f - ClampedDefence) / 100.0f;
             FinalDamage = DamageInfo.Amount * DefenceMultiplier;
             break;
         }

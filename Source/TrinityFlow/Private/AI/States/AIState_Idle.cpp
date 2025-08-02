@@ -105,11 +105,13 @@ bool UAIState_Idle::CheckForPlayer()
 			QueryParams
 		);
 
+#if !UE_BUILD_SHIPPING
 		DrawDebugLine(CachedEnemy->GetWorld(), StartLocation, EndLocation, 
 			!bHit || HitResult.GetActor() == PlayerPawn ? FColor::Green : FColor::Red, 
 			false, 0.5f);
 		
 		DrawDebugSphere(CachedEnemy->GetWorld(), CachedEnemy->GetActorLocation(), SightRange, 24, FColor::Yellow, false, 0.5f);
+#endif
 
 		if (!bHit || HitResult.GetActor() == PlayerPawn)
 		{

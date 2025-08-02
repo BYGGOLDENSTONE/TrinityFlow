@@ -56,6 +56,11 @@ protected:
     UPROPERTY()
     class APawn* PlayerTarget;
 
+    // Visibility trace caching for performance
+    float LastVisibilityCheck = -1.0f;
+    bool bCachedCanSeePlayer = false;
+    static constexpr float VisibilityCacheTime = 0.2f; // Cache for 0.2 seconds
+
 public:
     UPROPERTY()
     bool bHasSeenPlayer = false;

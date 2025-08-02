@@ -210,23 +210,27 @@ void ATrinityFlowCharacter::GlobalDefensiveAbility()
 			// Activate both defensive abilities for balanced effect
 			if (LeftKatana && RightKatana)
 			{
-				// Flow Guard provides combined benefits
-				bDefensiveAbilityActive = true;
-				DefensiveDamageMultiplier = 0.4f; // 60% damage reduction
-				DefensiveAbilityType = TEXT("Flow Guard");
-				DefensiveAbilityWindow = 1.5f; // 1.5 second window
-				
-				// Visual feedback for Flow Guard
-				UE_LOG(LogTemplateCharacter, Log, TEXT("Flow Guard activated! 60%% damage reduction for 1.5 seconds"));
-				
-				// Set timer to deactivate
-				GetWorldTimerManager().SetTimer(DefensiveAbilityTimer, [this]()
+				// Only activate if not already in a defensive window
+				if (!bDefensiveAbilityActive)
 				{
-					bDefensiveAbilityActive = false;
-					DefensiveDamageMultiplier = 1.0f;
-					DefensiveAbilityType = TEXT("");
-					UE_LOG(LogTemplateCharacter, Log, TEXT("Flow Guard deactivated"));
-				}, DefensiveAbilityWindow, false);
+					// Flow Guard provides combined benefits
+					bDefensiveAbilityActive = true;
+					DefensiveDamageMultiplier = 0.4f; // 60% damage reduction
+					DefensiveAbilityType = TEXT("Flow Guard");
+					DefensiveAbilityWindow = 1.5f; // 1.5 second window
+					DefensiveWindowTimer = 0.0f; // Reset timer
+					
+					// Visual feedback for Flow Guard
+					UE_LOG(LogTemplateCharacter, Log, TEXT("Flow Guard activated! 60%% damage reduction for 1.5 seconds"));
+					
+					// Set timer to deactivate using centralized function
+					GetWorldTimerManager().SetTimer(DefensiveAbilityTimer, [this]()
+					{
+						EndDefensiveAbility();
+						DefensiveAbilityType = TEXT("");
+						UE_LOG(LogTemplateCharacter, Log, TEXT("Flow Guard deactivated"));
+					}, DefensiveAbilityWindow, false);
+				}
 			}
 			break;
 	}
@@ -396,7 +400,7 @@ void ATrinityFlowCharacter::Tick(float DeltaTime)
 		}
 	}
 
-	// Update defensive window
+	// Update defensive window with atomic state management
 	if (bDefensiveAbilityActive)
 	{
 		DefensiveWindowTimer += DeltaTime;
@@ -404,80 +408,12 @@ void ATrinityFlowCharacter::Tick(float DeltaTime)
 		// Check if window expired (1.5 seconds)
 		if (DefensiveWindowTimer >= 1.5f)
 		{
-			// Window expired, take full damage
-			bDefensiveAbilityActive = false;
-			
-			// Hide timing bar
-			if (UGameInstance* GameInstance = GetGameInstance())
-			{
-				if (UTrinityFlowUIManager* UIManager = GameInstance->GetSubsystem<UTrinityFlowUIManager>())
-				{
-					UIManager->HideDefenseTiming();
-				}
-			}
-			
-			if (HealthComponent && PendingDamage > 0.0f)
-			{
-				FDamageInfo DamageInfo;
-				DamageInfo.Amount = PendingDamage;
-				DamageInfo.Type = PendingDamageType;
-				DamageInfo.Instigator = PendingAttacker;
-				
-				FVector DamageDirection = PendingAttacker ? (GetActorLocation() - PendingAttacker->GetActorLocation()).GetSafeNormal() : FVector::ForwardVector;
-				HealthComponent->TakeDamage(DamageInfo, DamageDirection);
-			}
-			
-			DefensiveWindowTimer = 0.0f;
-			PendingDamage = 0.0f;
-			PendingAttacker = nullptr;
+			// Ensure atomic state transition
+			EndDefensiveAbility();
 		}
 	}
 	
-	// Update UI with player stats periodically
-	static float UIUpdateTimer = 0.0f;
-	UIUpdateTimer += DeltaTime;
-	if (UIUpdateTimer >= 0.1f) // Update every 0.1 seconds
-	{
-		UIUpdateTimer = 0.0f;
-		
-		if (UGameInstance* GameInstance = GetGameInstance())
-		{
-			if (UTrinityFlowUIManager* UIManager = GameInstance->GetSubsystem<UTrinityFlowUIManager>())
-			{
-				// Update shard counts and damage bonuses
-				if (ShardComponent)
-				{
-					int32 SoulActive, SoulInactive, PowerActive, PowerInactive;
-					ShardComponent->GetShardCounts(SoulActive, SoulInactive, PowerActive, PowerInactive);
-					
-					// Get total damage bonuses (shard bonus + stance bonus)
-					float SoulBonus = ShardComponent->GetSoulDamageBonus();
-					float PhysicalBonus = ShardComponent->GetPhysicalDamageBonus();
-					
-					UIManager->UpdatePlayerStats(SoulActive, PowerActive, SoulInactive, PowerInactive, SoulBonus, PhysicalBonus);
-				}
-				
-				// Update combat state
-				if (StateComponent)
-				{
-					bool bInCombat = StateComponent->HasState(ECharacterState::Combat);
-					UIManager->UpdateCombatState(bInCombat);
-					
-					// Update stance flow bar
-					if (bInCombat && StanceComponent)
-					{
-						float FlowPosition = StanceComponent->GetFlowPosition();
-						UIManager->ShowStanceBar();
-						UIManager->UpdateStanceBar(FlowPosition);
-					}
-					else
-					{
-						UIManager->HideStanceBar();
-					}
-				}
-			}
-		}
-	}
+	// UI updates are now event-driven - removed periodic updates for better performance
 }
 
 void ATrinityFlowCharacter::LeftKatanaAttack()
@@ -1033,13 +969,24 @@ void ATrinityFlowCharacter::RightDefensiveAbility()
 
 void ATrinityFlowCharacter::OnIncomingAttack(AActor* Attacker, float Damage, EDamageType DamageType)
 {
-	// Start defensive window
-	bDefensiveAbilityActive = true;
-	DefensiveWindowTimer = 0.0f;
-	PendingAttacker = Attacker;
-	PendingDamage = Damage;
-	PendingDamageType = DamageType;
-	DefensiveDamageMultiplier = 1.0f;
+	// Only start defensive window if not already active
+	if (!bDefensiveAbilityActive)
+	{
+		// Start defensive window with atomic state change
+		bDefensiveAbilityActive = true;
+		DefensiveWindowTimer = 0.0f;
+		PendingAttacker = Attacker;
+		PendingDamage = Damage;
+		PendingDamageType = DamageType;
+		DefensiveDamageMultiplier = 1.0f;
+	}
+	// If already active, update pending damage if it's higher
+	else if (Damage > PendingDamage)
+	{
+		PendingDamage = Damage;
+		PendingDamageType = DamageType;
+		PendingAttacker = Attacker;
+	}
 	
 	// Show timing bar UI above enemy
 	if (UGameInstance* GameInstance = GetGameInstance())
@@ -1052,6 +999,44 @@ void ATrinityFlowCharacter::OnIncomingAttack(AActor* Attacker, float Damage, EDa
 	}
 	
 	UE_LOG(LogTemplateCharacter, Log, TEXT("Incoming attack! Defensive window started"));
+}
+
+void ATrinityFlowCharacter::EndDefensiveAbility()
+{
+	// Ensure atomic state transition - only process if actually active
+	if (!bDefensiveAbilityActive)
+	{
+		return;
+	}
+	
+	// Window expired, take full damage
+	bDefensiveAbilityActive = false;
+	
+	// Hide timing bar
+	if (UGameInstance* GameInstance = GetGameInstance())
+	{
+		if (UTrinityFlowUIManager* UIManager = GameInstance->GetSubsystem<UTrinityFlowUIManager>())
+		{
+			UIManager->HideDefenseTiming();
+		}
+	}
+	
+	if (HealthComponent && PendingDamage > 0.0f && IsValid(PendingAttacker))
+	{
+		FDamageInfo DamageInfo;
+		DamageInfo.Amount = PendingDamage;
+		DamageInfo.Type = PendingDamageType;
+		DamageInfo.Instigator = PendingAttacker;
+		
+		FVector DamageDirection = PendingAttacker ? (GetActorLocation() - PendingAttacker->GetActorLocation()).GetSafeNormal() : FVector::ForwardVector;
+		HealthComponent->TakeDamage(DamageInfo, DamageDirection);
+	}
+	
+	// Reset all defensive state
+	DefensiveWindowTimer = 0.0f;
+	PendingDamage = 0.0f;
+	PendingAttacker = nullptr;
+	DefensiveDamageMultiplier = 1.0f;
 }
 
 void ATrinityFlowCharacter::OnAnyDamageDealt(AActor* DamagedActor, float ActualDamage, AActor* DamageInstigator, EDamageType DamageType)
@@ -1088,9 +1073,15 @@ void ATrinityFlowCharacter::RegisterEnemyDamageEvents(AEnemyBase* Enemy)
 
 AActor* ATrinityFlowCharacter::GetTargetInSight()
 {
+	AController* CurrentController = GetController();
+	if (!CurrentController)
+	{
+		return nullptr;
+	}
+	
 	FVector CameraLocation;
 	FRotator CameraRotation;
-	GetController()->GetPlayerViewPoint(CameraLocation, CameraRotation);
+	CurrentController->GetPlayerViewPoint(CameraLocation, CameraRotation);
 
 	FVector TraceEnd = CameraLocation + (CameraRotation.Vector() * 10000.0f);
 
@@ -1276,5 +1267,55 @@ void ATrinityFlowCharacter::PauseGame()
 	if (ATrinityFlowGameMode* GameMode = Cast<ATrinityFlowGameMode>(UGameplayStatics::GetGameMode(this)))
 	{
 		GameMode->OnPauseRequested();
+	}
+}
+
+void ATrinityFlowCharacter::UpdatePlayerStatsUI()
+{
+	if (UGameInstance* GameInstance = GetGameInstance())
+	{
+		if (UTrinityFlowUIManager* UIManager = GameInstance->GetSubsystem<UTrinityFlowUIManager>())
+		{
+			// Update shard counts and damage bonuses
+			if (ShardComponent)
+			{
+				int32 SoulActive, SoulInactive, PowerActive, PowerInactive;
+				ShardComponent->GetShardCounts(SoulActive, SoulInactive, PowerActive, PowerInactive);
+				
+				// Get total damage bonuses (shard bonus + stance bonus)
+				float SoulBonus = ShardComponent->GetSoulDamageBonus();
+				float PhysicalBonus = ShardComponent->GetPhysicalDamageBonus();
+				
+				UIManager->UpdatePlayerStats(SoulActive, PowerActive, SoulInactive, PowerInactive, SoulBonus, PhysicalBonus);
+			}
+		}
+	}
+}
+
+void ATrinityFlowCharacter::UpdateCombatStateUI()
+{
+	if (UGameInstance* GameInstance = GetGameInstance())
+	{
+		if (UTrinityFlowUIManager* UIManager = GameInstance->GetSubsystem<UTrinityFlowUIManager>())
+		{
+			// Update combat state
+			if (StateComponent)
+			{
+				bool bInCombat = StateComponent->HasState(ECharacterState::Combat);
+				UIManager->UpdateCombatState(bInCombat);
+				
+				// Update stance flow bar
+				if (bInCombat && StanceComponent)
+				{
+					float FlowPosition = StanceComponent->GetFlowPosition();
+					UIManager->ShowStanceBar();
+					UIManager->UpdateStanceBar(FlowPosition);
+				}
+				else
+				{
+					UIManager->HideStanceBar();
+				}
+			}
+		}
 	}
 }

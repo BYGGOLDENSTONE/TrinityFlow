@@ -118,6 +118,7 @@ void UAIState_Attack::PerformAttack()
 		}
 	}
 
+#if !UE_BUILD_SHIPPING
 	#if WITH_EDITOR
 	if (CachedEnemy->GetWorld()->WorldType == EWorldType::Editor)
 	{
@@ -131,6 +132,7 @@ void UAIState_Attack::PerformAttack()
 		}
 	}
 	#endif
+#endif
 }
 
 bool UAIState_Attack::IsTargetInRange()

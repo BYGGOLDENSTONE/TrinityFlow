@@ -202,9 +202,38 @@ Source/TrinityFlow/
 - State inspection commands
 - Performance profiling points
 
+## Performance Optimizations
+
+### Memory Management
+- Timer handles properly cleaned up in EndPlay/BeginDestroy
+- Circular buffer implementation for attack tracking (O(1) vs O(n))
+- Pre-allocated arrays for frequently used collections
+
+### Rendering Optimizations
+- Debug rendering wrapped in `#if !UE_BUILD_SHIPPING` macros
+- No debug overhead in production builds
+- Conditional compilation for development-only features
+
+### AI Performance
+- Visibility traces cached for 0.2 seconds per enemy
+- Reduces expensive line trace operations
+- Scales better with high enemy counts
+
+### UI Performance
+- Event-driven updates instead of tick-based polling
+- UI only updates when values actually change
+- Removed unnecessary 10Hz update loops
+
+### Code Safety
+- Comprehensive null pointer checks in critical paths
+- Atomic state transitions for thread safety
+- Defensive programming patterns throughout
+
 ## Future Considerations
 - Multiplayer replication paths
 - Save system integration points
 - Modular ability system expansion
 - Enhanced AI behavior trees
+- Migration to diegetic UI elements
+- Behavior tree AI implementation
 - Performance scaling options

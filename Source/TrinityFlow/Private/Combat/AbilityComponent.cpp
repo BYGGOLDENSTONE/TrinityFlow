@@ -111,8 +111,10 @@ void UAbilityComponent::ProcessEchoesDamageActual(AActor* DamagedActor, float Ac
         FVector DamageDirection = (EchoesData.MarkedEnemy->GetActorLocation() - DamagedActor->GetActorLocation()).GetSafeNormal();
         MarkedHealth->TakeDamage(EchoDamage, DamageDirection);
 
+#if !UE_BUILD_SHIPPING
         // Visual feedback
         DrawDebugLine(GetWorld(), DamagedActor->GetActorLocation(), EchoesData.MarkedEnemy->GetActorLocation(), 
                      FColor::Purple, false, 0.5f, 0, 1.0f);
+#endif
     }
 }
